@@ -10,7 +10,6 @@ import DeviceConfigScreen from '../screens/AddDevice/DeviceConfigScreen';
 import DeviceDetailScreen from '../screens/DeviceDetail/DeviceDetailScreen';
 import IncidentsScreen from '../screens/Incidents/IncidentsScreen';
 import ReportsScreen from '../screens/Reports/ReportsScreen';
-import NotificationsScreen from '../screens/Notifications/NotificationsScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -36,7 +35,6 @@ function Tabs() {
             Dashboard: 'grid-outline',
             Reports: 'bar-chart-outline',
             Incidents: 'warning-outline',
-            Notifications: 'notifications-outline',
           };
           return <Ionicons name={icons[route.name] ?? 'ellipse-outline'} size={size} color={color} />;
         },
@@ -45,7 +43,6 @@ function Tabs() {
       <Tab.Screen name="Dashboard" component={DashboardScreen} />
       <Tab.Screen name="Reports" component={ReportsScreen} />
       <Tab.Screen name="Incidents" component={IncidentsScreen} />
-      <Tab.Screen name="Notifications" component={NotificationsScreen} />
     </Tab.Navigator>
   );
 }
