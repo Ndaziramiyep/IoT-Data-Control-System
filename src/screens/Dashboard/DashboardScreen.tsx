@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import {
   View, Text, Image, ScrollView, TouchableOpacity, StyleSheet, Dimensions,
 } from 'react-native';
@@ -99,17 +99,16 @@ function MultiLineGraph({
 }
 
 // ── Device card ───────────────────────────────────────────────────────────────
-function DeviceCard({ device, lastTemp }: { device: Device; lastTemp: number | null }) {
-  const displayTemp = lastTemp ?? null;
+function DeviceCard({ device, lastTemp, hasReading }: { device: Device; lastTemp: number | null; hasReading: boolean }) {
   return (
     <View style={styles.deviceCard}>
       <View style={styles.deviceCardRow}>
         <Text style={styles.deviceName}>{device.name}</Text>
-        <View style={styles.dot} />
+        <View style={[styles.dot, { backgroundColor: hasReading ? '#22C55E' : '#D1D5DB' }]} />
       </View>
       <Text style={styles.deviceTemp}>
-        {displayTemp !== null
-          ? `${displayTemp > 0 ? '' : ''}${displayTemp.toFixed(1)} °C`
+        {lastTemp !== null
+          ? `${lastTemp.toFixed(1)} °C`
           : '-- °C'}
       </Text>
       <Text style={styles.deviceMac}>{device.macAddress}</Text>
@@ -172,7 +171,7 @@ function CategorySection({ category, devices }: { category: DeviceCategory; devi
       {/* Device cards */}
       <View style={styles.cardGrid}>
         {devices.map((d, i) => (
-          <DeviceCard key={d.id} device={d} lastTemp={lastTemps[i]} />
+          <DeviceCard key={d.id} device={d} lastTemp={lastTemps[i]} hasReading={lastTemps[i] !== null} />
         ))}
       </View>
 
@@ -230,22 +229,6 @@ export default function DashboardScreen({ navigation }: any) {
   const { devices } = useDevices();
   const isEmpty = devices.length === 0;
 
-  useEffect(() => {
-    navigation.getParent()?.setOptions({
-      tabBarStyle: isEmpty
-        ? { display: 'none' }
-        : {
-            backgroundColor: '#fff',
-            borderTopWidth: 1,
-            borderTopColor: '#F0F0F0',
-            height: 64,
-            paddingBottom: 10,
-            paddingTop: 8,
-            display: 'flex',
-          },
-    });
-  }, [isEmpty]);
-
   const byCategory = (cat: DeviceCategory) => devices.filter(d => d.category === cat);
   const freezers = byCategory('freezer');
   const fridges = byCategory('fridge');
@@ -257,14 +240,17 @@ export default function DashboardScreen({ navigation }: any) {
       <View style={styles.topBar}>
         <Image source={require('../../../assets/Kumva-New-Logo-D.png')} style={styles.logoImg} resizeMode="contain" />
         <Text style={styles.appTitle}>Kumva Insights</Text>
-        <View style={styles.topBarIcons}>
-          <TouchableOpacity style={styles.addIconBtn} onPress={() => navigation.navigate('AddDevice')}>
-            <Text style={styles.addIconText}>＋</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.iconBtn}>
-            <Text style={styles.iconBtnText}>🔔</Text>
-          </TouchableOpacity>
-        </View>
+        {!isEmpty && (
+          <View style={styles.topBarIcons}>
+            <TouchableOpacity style={styles.addIconBtn} onPress={() => navigation.navigate('AddDevice')}>
+              <Text style={styles.addIconText}>＋</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.iconBtn}>
+              <Text style={styles.iconBtnText}>🔔</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+        {isEmpty && <View style={{ width: 36 }} />}
       </View>
 
       {/* Empty state */}

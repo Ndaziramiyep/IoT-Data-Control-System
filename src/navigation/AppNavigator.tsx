@@ -3,6 +3,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
+import { useAppStore } from '../store/store';
 
 import DashboardScreen from '../screens/Dashboard/DashboardScreen';
 import ScannerScreen from '../screens/AddDevice/ScannerScreen';
@@ -15,20 +16,26 @@ const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
 
 function Tabs() {
+  const hasDevices = useAppStore(s => s.devices.length > 0);
+
+  const tabBarStyle = hasDevices
+    ? {
+        backgroundColor: '#fff',
+        borderTopWidth: 1,
+        borderTopColor: '#F0F0F0',
+        height: 64,
+        paddingBottom: 10,
+        paddingTop: 8,
+      }
+    : { display: 'none' as const };
+
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
         headerShown: false,
         tabBarActiveTintColor: '#5C6BC0',
         tabBarInactiveTintColor: '#9CA3AF',
-        tabBarStyle: {
-          backgroundColor: '#fff',
-          borderTopWidth: 1,
-          borderTopColor: '#F0F0F0',
-          height: 64,
-          paddingBottom: 10,
-          paddingTop: 8,
-        },
+        tabBarStyle,
         tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
         tabBarIcon: ({ color, size }) => {
           const icons: Record<string, keyof typeof Ionicons.glyphMap> = {

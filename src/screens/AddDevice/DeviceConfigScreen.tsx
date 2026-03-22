@@ -3,7 +3,7 @@ import {
   View, Text, TextInput, TouchableOpacity, ScrollView,
   StyleSheet, SafeAreaView, ActivityIndicator, Alert,
 } from 'react-native';
-import { insertDevice } from '../../database/repositories/deviceRepository';
+import { insertDevice, getAllDevices } from '../../database/repositories/deviceRepository';
 import { useAppStore } from '../../store/store';
 import { Device, DeviceCategory } from '../../types/device';
 
@@ -15,6 +15,7 @@ const CATEGORIES: { label: string; value: DeviceCategory }[] = [
 
 export default function DeviceConfigScreen({ navigation, route }: any) {
   const addDevice = useAppStore(s => s.addDevice);
+  const existingDevices = useAppStore(s => s.devices);
   const scanned = route.params?.scannedDevice as { name: string; macAddress: string; category?: string } | null;
 
   const [name, setName] = useState(scanned?.name ?? '');
@@ -34,13 +35,37 @@ export default function DeviceConfigScreen({ navigation, route }: any) {
       Alert.alert('Device Name Required', 'Please enter a name for this device.');
       return;
     }
-    const trimmedMac = macAddress.trim();
+    const trimmedMac = macAddress.trim().toUpperCase();
     if (!trimmedMac) {
       Alert.alert('MAC Address Required', 'Please enter the device MAC address.');
       return;
     }
+    // Check duplicate MAC in Zustand store (covers web + native in-session)
+    const duplicateInStore = existingDevices.find(
+      d => d.macAddress.toUpperCase() === trimmedMac
+    );
+    if (duplicateInStore) {
+      Alert.alert(
+        'Device Already Registered',
+        `A device with MAC address ${trimmedMac} is already registered as "${duplicateInStore.name}".`
+      );
+      return;
+    }
     setSaving(true);
     try {
+      // Also check DB for duplicates (native only — catches devices from previous sessions)
+      const dbDevices = await getAllDevices();
+      const duplicateInDb = dbDevices.find(
+        d => d.macAddress.toUpperCase() === trimmedMac
+      );
+      if (duplicateInDb) {
+        Alert.alert(
+          'Device Already Registered',
+          `A device with MAC address ${trimmedMac} is already registered as "${duplicateInDb.name}".`
+        );
+        setSaving(false);
+        return;
+      }
       const device: Device = {
         id: Date.now().toString(),
         name: trimmedName,
