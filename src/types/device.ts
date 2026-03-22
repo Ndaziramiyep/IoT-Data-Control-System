@@ -1,4 +1,4 @@
-export type DeviceCategory = 'freezer' | 'fridge' | 'cold_room';
+export type DeviceCategory = 'freezer' | 'fridge' | 'cold_room' | 'general';
 
 export interface Device {
   device_id: string;

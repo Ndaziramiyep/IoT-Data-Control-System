@@ -11,20 +11,27 @@ const CATEGORIES: { label: string; value: DeviceCategory }[] = [
   { label: 'Freezer', value: 'freezer' },
   { label: 'Fridge', value: 'fridge' },
   { label: 'Cold Room', value: 'cold_room' },
+  { label: 'General Area', value: 'general' },
 ];
+
+const CATEGORY_DEFAULTS: Record<DeviceCategory, { low: string; high: string }> = {
+  freezer:   { low: '-20', high: '0' },
+  fridge:    { low: '2',   high: '8' },
+  cold_room: { low: '0',  high: '10' },
+  general:   { low: '15', high: '30' },
+};
 
 export default function DeviceConfigScreen({ navigation, route }: any) {
   const addDevice = useAppStore(s => s.addDevice);
   const existingDevices = useAppStore(s => s.devices);
   const scanned = route.params?.scannedDevice as { name: string; macAddress: string; category?: string } | null;
 
+  const initialCategory = (scanned?.category as DeviceCategory) ?? 'freezer';
   const [name, setName] = useState(scanned?.name ?? '');
   const [macAddress, setMacAddress] = useState(scanned?.macAddress ?? '');
-  const [category, setCategory] = useState<DeviceCategory>(
-    (scanned?.category as DeviceCategory) ?? 'freezer'
-  );
-  const [highThreshold, setHighThreshold] = useState('0');
-  const [lowThreshold, setLowThreshold] = useState('-20');
+  const [category, setCategory] = useState<DeviceCategory>(initialCategory);
+  const [highThreshold, setHighThreshold] = useState(CATEGORY_DEFAULTS[initialCategory].high);
+  const [lowThreshold, setLowThreshold] = useState(CATEGORY_DEFAULTS[initialCategory].low);
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -151,7 +158,12 @@ export default function DeviceConfigScreen({ navigation, route }: any) {
               <TouchableOpacity
                 key={c.value}
                 style={[styles.dropdownItem, c.value === category && styles.dropdownItemActive]}
-                onPress={() => { setCategory(c.value); setShowCategoryPicker(false); }}
+                onPress={() => {
+                  setCategory(c.value);
+                  setHighThreshold(CATEGORY_DEFAULTS[c.value].high);
+                  setLowThreshold(CATEGORY_DEFAULTS[c.value].low);
+                  setShowCategoryPicker(false);
+                }}
               >
                 <Text style={[styles.dropdownText, c.value === category && styles.dropdownTextActive]}>
                   {c.label}

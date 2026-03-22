@@ -16,6 +16,7 @@ const CATEGORY_RANGES: Record<DeviceCategory, string> = {
   freezer: 'Range: -20 to 0°C',
   fridge: 'Range: 2 to 8°C',
   cold_room: 'Range: 0 to 10°C',
+  general: 'Range: 15 to 30°C',
 };
 
 // ── Multi-line graph ──────────────────────────────────────────────────────────
@@ -99,7 +100,7 @@ function CategorySection({ category, devices }: { category: DeviceCategory; devi
     });
   }, [devices]);
 
-  const label = category === 'cold_room' ? 'COLD ROOM' : category.toUpperCase();
+  const label = category === 'cold_room' ? 'COLD ROOM' : category === 'general' ? 'GENERAL AREA' : category.toUpperCase();
   const range = CATEGORY_RANGES[category];
   const highThreshold = devices[0]?.temp_high_threshold ?? 0;
   const lowThreshold = devices[0]?.temp_low_threshold ?? -20;
@@ -191,6 +192,7 @@ export default function DashboardScreen({ navigation }: any) {
   const freezers = byCategory('freezer');
   const fridges = byCategory('fridge');
   const coldRooms = byCategory('cold_room');
+  const generalAreas = byCategory('general');
 
   return (
     <View style={styles.container}>
@@ -238,6 +240,7 @@ export default function DashboardScreen({ navigation }: any) {
           {freezers.length > 0 && <CategorySection category="freezer" devices={freezers} />}
           {fridges.length > 0 && <CategorySection category="fridge" devices={fridges} />}
           {coldRooms.length > 0 && <CategorySection category="cold_room" devices={coldRooms} />}
+          {generalAreas.length > 0 && <CategorySection category="general" devices={generalAreas} />}
         </ScrollView>
       )}
     </View>
