@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
-  View, Text, Image, ScrollView, TouchableOpacity, StyleSheet, Dimensions,
+  View, Text, Image, ScrollView, TouchableOpacity, StyleSheet, Dimensions, Animated, Pressable,
 } from 'react-native';
 import { useDevices } from '../../hooks/useDevices';
 import { getReadingsByDevice } from '../../database/repositories/readingRepository';
@@ -72,25 +72,32 @@ function MultiLineGraph({
   );
 }
 
-// ── Device card ───────────────────────────────────────────────────────────────
-function DeviceCard({ device, lastTemp, hasReading }: { device: Device; lastTemp: number | null; hasReading: boolean }) {
+// ── Animated press wrapper ────────────────────────────────────────────────────
+function ScalePress({ onPress, style, children }: { onPress: () => void; style?: object; children: React.ReactNode }) {
+  const scale = useRef(new Animated.Value(1)).current;
   return (
-    <View style={styles.deviceCard}>
-      <View style={styles.deviceCardRow}>
-        <Text style={styles.deviceName}>{device.name}</Text>
-        <View style={[styles.dot, { backgroundColor: hasReading ? '#22C55E' : '#D1D5DB' }]} />
-      </View>
-      <Text style={styles.deviceTemp}>
-        {lastTemp !== null ? `${lastTemp.toFixed(1)} °C` : '-- °C'}
-      </Text>
-      <Text style={styles.deviceMac}>{device.mac_address}</Text>
-    </View>
+    <Pressable
+      onPress={onPress}
+      onPressIn={() => Animated.spring(scale, { toValue: 0.96, useNativeDriver: true, friction: 8 }).start()}
+      onPressOut={() => Animated.spring(scale, { toValue: 1, useNativeDriver: true, friction: 6 }).start()}
+    >
+      <Animated.View style={[style, { transform: [{ scale }] }]}>{children}</Animated.View>
+    </Pressable>
   );
 }
 
 // ── Category section ──────────────────────────────────────────────────────────
-function CategorySection({ category, devices, navigation }: { category: DeviceCategory; devices: Device[]; navigation: any }) {
+function CategorySection({ category, devices, navigation, sectionIndex }: { category: DeviceCategory; devices: Device[]; navigation: any; sectionIndex: number }) {
   const [readingsMap, setReadingsMap] = useState<Record<string, Reading[]>>({});
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(30)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, { toValue: 1, duration: 400, delay: sectionIndex * 120, useNativeDriver: true }),
+      Animated.spring(slideAnim, { toValue: 0, friction: 8, tension: 60, delay: sectionIndex * 120, useNativeDriver: true }),
+    ]).start();
+  }, []);
 
   useEffect(() => {
     devices.forEach(d => {
@@ -129,7 +136,7 @@ function CategorySection({ category, devices, navigation }: { category: DeviceCa
   const xLabels = Array.from({ length: 7 }, (_, i) => DAY_LABELS[(today - 6 + i + 7) % 7]);
 
   return (
-    <View style={styles.section}>
+    <Animated.View style={[styles.section, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
       <View style={styles.sectionHeader}>
         <View>
           <Text style={styles.sectionTitle}>{label}</Text>
@@ -145,11 +152,10 @@ function CategorySection({ category, devices, navigation }: { category: DeviceCa
 
       <View style={styles.cardGrid}>
         {devices.map((d, i) => (
-          <TouchableOpacity
+          <ScalePress
             key={d.device_id}
             style={styles.deviceCard}
             onPress={() => navigation.navigate('DeviceDetail', { deviceId: d.device_id })}
-            activeOpacity={0.8}
           >
             <View style={styles.deviceCardRow}>
               <Text style={styles.deviceName}>{d.name}</Text>
@@ -161,7 +167,7 @@ function CategorySection({ category, devices, navigation }: { category: DeviceCa
             <Text style={styles.deviceMac}>
               {d.battery_level != null ? `🔋 ${d.battery_level}%` : '🔋 --'}
             </Text>
-          </TouchableOpacity>
+          </ScalePress>
         ))}
       </View>
 
@@ -204,14 +210,50 @@ function CategorySection({ category, devices, navigation }: { category: DeviceCa
           ))}
         </View>
       </View>
-    </View>
+    </Animated.View>
   );
+}
+
+// ── Bell shake hook ───────────────────────────────────────────────────────────
+function useBellShake() {
+  const shakeAnim = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    const shake = Animated.sequence([
+      Animated.timing(shakeAnim, { toValue: 8, duration: 60, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: -8, duration: 60, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: 6, duration: 60, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: -6, duration: 60, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: 0, duration: 60, useNativeDriver: true }),
+    ]);
+    const loop = Animated.loop(
+      Animated.sequence([shake, Animated.delay(4000)]),
+      { iterations: -1 }
+    );
+    loop.start();
+    return () => loop.stop();
+  }, []);
+  return shakeAnim;
 }
 
 // ── Main Dashboard ────────────────────────────────────────────────────────────
 export default function DashboardScreen({ navigation }: any) {
   const { devices } = useDevices();
   const isEmpty = devices.length === 0;
+  const bellShake = useBellShake();
+  const addBtnScale = useRef(new Animated.Value(1)).current;
+
+  // Add button pulse on empty state
+  useEffect(() => {
+    if (!isEmpty) return;
+    const pulse = Animated.loop(
+      Animated.sequence([
+        Animated.timing(addBtnScale, { toValue: 1.04, duration: 700, useNativeDriver: true }),
+        Animated.timing(addBtnScale, { toValue: 1, duration: 700, useNativeDriver: true }),
+      ])
+    );
+    pulse.start();
+    return () => pulse.stop();
+  }, [isEmpty]);
 
   const byCategory = (cat: DeviceCategory) => devices.filter(d => d.category === cat);
   const freezers = byCategory('freezer');
@@ -226,11 +268,16 @@ export default function DashboardScreen({ navigation }: any) {
         <Text style={styles.appTitle}>Kumva Insights</Text>
         {!isEmpty ? (
           <View style={styles.topBarIcons}>
-            <TouchableOpacity style={styles.addIconBtn} onPress={() => navigation.navigate('AddDevice')}>
+            <Pressable
+              style={styles.addIconBtn}
+              onPress={() => navigation.navigate('AddDevice')}
+              onPressIn={() => Animated.spring(addBtnScale, { toValue: 0.9, useNativeDriver: true, friction: 8 }).start()}
+              onPressOut={() => Animated.spring(addBtnScale, { toValue: 1, useNativeDriver: true, friction: 6 }).start()}
+            >
               <Text style={styles.addIconText}>＋</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.iconBtn} onPress={() => navigation.navigate('Notifications')}>
-              <Text style={styles.iconBtnText}>🔔</Text>
+            </Pressable>
+            <TouchableOpacity style={styles.iconBtn} onPress={() => navigation.navigate('Notifications')} activeOpacity={0.7}>
+              <Animated.Text style={[styles.iconBtnText, { transform: [{ translateX: bellShake }] }]}>🔔</Animated.Text>
             </TouchableOpacity>
           </View>
         ) : (
@@ -254,18 +301,24 @@ export default function DashboardScreen({ navigation }: any) {
             by connecting your first BLE sensor. Track{'\n'}
             incidents and  view real-time data.
           </Text>
-          <TouchableOpacity style={styles.addBtn} onPress={() => navigation.navigate('AddDevice')} activeOpacity={0.85}>
-            <Text style={styles.addBtnIcon}>⊕</Text>
-            <Text style={styles.addBtnText}>Add Device</Text>
-          </TouchableOpacity>
+          <Pressable
+            onPress={() => navigation.navigate('AddDevice')}
+            onPressIn={() => Animated.spring(addBtnScale, { toValue: 0.96, useNativeDriver: true, friction: 8 }).start()}
+            onPressOut={() => Animated.spring(addBtnScale, { toValue: 1, useNativeDriver: true, friction: 6 }).start()}
+          >
+            <Animated.View style={[styles.addBtn, { transform: [{ scale: addBtnScale }] }]}>
+              <Text style={styles.addBtnIcon}>⊕</Text>
+              <Text style={styles.addBtnText}>Add Device</Text>
+            </Animated.View>
+          </Pressable>
           <Text style={styles.footer}>CONNECTED INFRASTRUCTURE STARTS HERE</Text>
         </View>
       ) : (
         <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-          {freezers.length > 0 && <CategorySection category="freezer" devices={freezers} navigation={navigation} />}
-          {fridges.length > 0 && <CategorySection category="fridge" devices={fridges} navigation={navigation} />}
-          {coldRooms.length > 0 && <CategorySection category="cold_room" devices={coldRooms} navigation={navigation} />}
-          {generalAreas.length > 0 && <CategorySection category="general" devices={generalAreas} navigation={navigation} />}
+          {freezers.length > 0 && <CategorySection category="freezer" devices={freezers} navigation={navigation} sectionIndex={0} />}
+          {fridges.length > 0 && <CategorySection category="fridge" devices={fridges} navigation={navigation} sectionIndex={1} />}
+          {coldRooms.length > 0 && <CategorySection category="cold_room" devices={coldRooms} navigation={navigation} sectionIndex={2} />}
+          {generalAreas.length > 0 && <CategorySection category="general" devices={generalAreas} navigation={navigation} sectionIndex={3} />}
         </ScrollView>
       )}
     </View>

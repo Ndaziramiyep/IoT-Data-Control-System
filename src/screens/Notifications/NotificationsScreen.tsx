@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
-  View, Text, FlatList, TouchableOpacity, StyleSheet, SafeAreaView,
+  View, Text, FlatList, TouchableOpacity, StyleSheet,
+  SafeAreaView, Animated, Pressable,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -57,26 +58,125 @@ function formatTimestamp(ts: number): string {
   const diff = Date.now() - ts;
   if (diff < 2 * 60 * 1000) return 'JUST NOW';
   const d = new Date(ts);
-  return d.toLocaleDateString('en-US', { month: 'long', day: '2-digit', year: 'numeric' })
-    + ' — '
-    + d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+  return (
+    d.toLocaleDateString('en-US', { month: 'long', day: '2-digit', year: 'numeric' }) +
+    ' — ' +
+    d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+  );
 }
 
-function NotifIcon({ type }: { type: NotifType }) {
+// ── Animated notification row ─────────────────────────────────────────────────
+function NotifRow({
+  item, index, onDelete,
+}: { item: Notification; index: number; onDelete: (id: string) => void }) {
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(24)).current;
+  const deleteAnim = useRef(new Animated.Value(1)).current;
+  const deleteHeight = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1, duration: 350, delay: index * 70, useNativeDriver: true,
+      }),
+      Animated.spring(slideAnim, {
+        toValue: 0, friction: 8, tension: 60, delay: index * 70, useNativeDriver: true,
+      }),
+    ]).start();
+  }, []);
+
+  const handleDelete = () => {
+    Animated.parallel([
+      Animated.timing(deleteAnim, { toValue: 0, duration: 250, useNativeDriver: true }),
+      Animated.timing(deleteHeight, { toValue: 0, duration: 300, delay: 200, useNativeDriver: true }),
+    ]).start(() => onDelete(item.id));
+  };
+
+  const timeStr = formatTimestamp(item.timestamp);
+  const isJustNow = timeStr === 'JUST NOW';
+  const iconBg = item.type === 'monthly' ? '#EDE9FE' : '#EEF0FB';
+  const iconColor = item.type === 'monthly' ? '#7C3AED' : '#5C6BC0';
+  const iconName = item.type === 'monthly' ? 'bar-chart-outline' : 'calendar-outline';
+
   return (
-    <View style={[styles.iconWrap, { backgroundColor: type === 'monthly' ? '#EDE9FE' : '#EEF0FB' }]}>
-      <Ionicons
-        name={type === 'monthly' ? 'bar-chart-outline' : 'calendar-outline'}
-        size={20}
-        color={type === 'monthly' ? '#7C3AED' : '#5C6BC0'}
-      />
+    <Animated.View style={{
+      opacity: Animated.multiply(fadeAnim, deleteAnim),
+      transform: [
+        { translateY: slideAnim },
+        { scaleY: deleteHeight },
+      ],
+    }}>
+      <View style={styles.item}>
+        <View style={[styles.iconWrap, { backgroundColor: iconBg }]}>
+          <Ionicons name={iconName as any} size={20} color={iconColor} />
+        </View>
+        <View style={styles.itemBody}>
+          <View style={styles.itemTitleRow}>
+            <Text style={styles.itemTitle}>{item.title}</Text>
+            {isJustNow && <Text style={styles.justNow}>JUST NOW</Text>}
+          </View>
+          <Text style={styles.itemText}>{item.body}</Text>
+          {!isJustNow && <Text style={styles.itemTime}>{timeStr}</Text>}
+        </View>
+        <TouchableOpacity onPress={handleDelete} style={styles.deleteBtn} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+          <Ionicons name="trash-outline" size={18} color="#C4C4C4" />
+        </TouchableOpacity>
+      </View>
+      <View style={styles.separator} />
+    </Animated.View>
+  );
+}
+
+// ── Animated tab pill ─────────────────────────────────────────────────────────
+function TabBar({ tab, onSelect }: { tab: 'all' | 'unread'; onSelect: (t: 'all' | 'unread') => void }) {
+  const pillX = useRef(new Animated.Value(0)).current;
+  const [containerWidth, setContainerWidth] = useState(0);
+
+  useEffect(() => {
+    Animated.spring(pillX, {
+      toValue: tab === 'all' ? 0 : containerWidth / 2,
+      friction: 8, tension: 70, useNativeDriver: true,
+    }).start();
+  }, [tab, containerWidth]);
+
+  return (
+    <View
+      style={styles.tabRow}
+      onLayout={e => setContainerWidth(e.nativeEvent.layout.width)}
+    >
+      {containerWidth > 0 && (
+        <Animated.View
+          style={[
+            styles.tabPill,
+            { width: containerWidth / 2 - 4, transform: [{ translateX: pillX }] },
+          ]}
+        />
+      )}
+      {(['all', 'unread'] as const).map(t => (
+        <TouchableOpacity key={t} style={styles.tab} onPress={() => onSelect(t)} activeOpacity={0.7}>
+          <Text style={[styles.tabText, tab === t && styles.tabTextActive]}>
+            {t === 'all' ? 'All' : 'Unread'}
+          </Text>
+        </TouchableOpacity>
+      ))}
     </View>
   );
 }
 
+// ── Screen ────────────────────────────────────────────────────────────────────
 export default function NotificationsScreen({ navigation }: any) {
   const [tab, setTab] = useState<'all' | 'unread'>('all');
   const [notifications, setNotifications] = useState(MOCK_NOTIFICATIONS);
+
+  const headerOpacity = useRef(new Animated.Value(0)).current;
+  const headerY = useRef(new Animated.Value(-16)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(headerOpacity, { toValue: 1, duration: 300, useNativeDriver: true }),
+      Animated.spring(headerY, { toValue: 0, friction: 8, tension: 80, useNativeDriver: true }),
+    ]).start();
+  }, []);
 
   const displayed = tab === 'unread' ? notifications.filter(n => !n.read) : notifications;
 
@@ -86,61 +186,33 @@ export default function NotificationsScreen({ navigation }: any) {
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+      <Animated.View style={[styles.header, { opacity: headerOpacity, transform: [{ translateY: headerY }] }]}>
+        <Pressable
+          onPress={() => navigation.goBack()}
+          style={({ pressed }) => [styles.backBtn, pressed && { opacity: 0.5 }]}
+        >
           <Ionicons name="chevron-back" size={24} color="#1C1C1E" />
-        </TouchableOpacity>
+        </Pressable>
         <Text style={styles.headerTitle}>Notifications</Text>
         <View style={{ width: 36 }} />
-      </View>
+      </Animated.View>
 
-      {/* Tabs */}
-      <View style={styles.tabRow}>
-        <TouchableOpacity
-          style={[styles.tab, tab === 'all' && styles.tabActive]}
-          onPress={() => setTab('all')}
-        >
-          <Text style={[styles.tabText, tab === 'all' && styles.tabTextActive]}>All</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tab, tab === 'unread' && styles.tabActive]}
-          onPress={() => setTab('unread')}
-        >
-          <Text style={[styles.tabText, tab === 'unread' && styles.tabTextActive]}>Unread</Text>
-        </TouchableOpacity>
-      </View>
+      <TabBar tab={tab} onSelect={setTab} />
 
-      {/* List */}
       <FlatList
         data={displayed}
         keyExtractor={item => item.id}
         contentContainerStyle={styles.list}
-        ItemSeparatorComponent={() => <View style={styles.separator} />}
+        showsVerticalScrollIndicator={false}
         ListEmptyComponent={
           <View style={styles.emptyWrap}>
+            <Ionicons name="notifications-off-outline" size={40} color="#D1D5DB" />
             <Text style={styles.emptyText}>No notifications</Text>
           </View>
         }
-        renderItem={({ item }) => {
-          const timeStr = formatTimestamp(item.timestamp);
-          const isJustNow = timeStr === 'JUST NOW';
-          return (
-            <View style={styles.item}>
-              <NotifIcon type={item.type} />
-              <View style={styles.itemBody}>
-                <View style={styles.itemTitleRow}>
-                  <Text style={styles.itemTitle}>{item.title}</Text>
-                  {isJustNow && <Text style={styles.justNow}>JUST NOW</Text>}
-                </View>
-                <Text style={styles.itemText}>{item.body}</Text>
-                {!isJustNow && <Text style={styles.itemTime}>{timeStr}</Text>}
-              </View>
-              <TouchableOpacity onPress={() => deleteNotif(item.id)} style={styles.deleteBtn}>
-                <Ionicons name="trash-outline" size={18} color="#C4C4C4" />
-              </TouchableOpacity>
-            </View>
-          );
-        }}
+        renderItem={({ item, index }) => (
+          <NotifRow item={item} index={index} onDelete={deleteNotif} />
+        )}
       />
     </SafeAreaView>
   );
@@ -158,13 +230,17 @@ const styles = StyleSheet.create({
   tabRow: {
     flexDirection: 'row', margin: 16, marginBottom: 8,
     backgroundColor: '#F4F6FB', borderRadius: 12, padding: 4,
+    position: 'relative',
   },
-  tab: { flex: 1, paddingVertical: 10, borderRadius: 10, alignItems: 'center' },
-  tabActive: { backgroundColor: '#5C6BC0' },
+  tabPill: {
+    position: 'absolute', top: 4, left: 4, bottom: 4,
+    backgroundColor: '#5C6BC0', borderRadius: 10,
+  },
+  tab: { flex: 1, paddingVertical: 10, borderRadius: 10, alignItems: 'center', zIndex: 1 },
   tabText: { fontSize: 14, fontWeight: '600', color: '#9CA3AF' },
   tabTextActive: { color: '#fff' },
   list: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 32 },
-  separator: { height: StyleSheet.hairlineWidth, backgroundColor: '#F0F0F0', marginVertical: 4 },
+  separator: { height: StyleSheet.hairlineWidth, backgroundColor: '#F0F0F0', marginVertical: 2 },
   item: { flexDirection: 'row', alignItems: 'flex-start', paddingVertical: 14, gap: 12 },
   iconWrap: { width: 40, height: 40, borderRadius: 10, alignItems: 'center', justifyContent: 'center', marginTop: 2 },
   itemBody: { flex: 1, gap: 3 },
@@ -174,6 +250,6 @@ const styles = StyleSheet.create({
   itemText: { fontSize: 13, color: '#6B7280', lineHeight: 19 },
   itemTime: { fontSize: 11, color: '#9CA3AF', marginTop: 2 },
   deleteBtn: { padding: 4, marginTop: 2 },
-  emptyWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 80 },
+  emptyWrap: { alignItems: 'center', justifyContent: 'center', paddingTop: 80, gap: 12 },
   emptyText: { color: '#9CA3AF', fontSize: 14 },
 });

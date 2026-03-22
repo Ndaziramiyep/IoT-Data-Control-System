@@ -7,18 +7,32 @@ interface SplashScreenProps {
 
 export default function SplashScreen({ onFinish }: SplashScreenProps) {
   const opacity = useRef(new Animated.Value(0)).current;
+  const scale = useRef(new Animated.Value(0.75)).current;
 
   useEffect(() => {
     Animated.sequence([
-      Animated.timing(opacity, { toValue: 1, duration: 600, useNativeDriver: true }),
-      Animated.delay(1400),
-      Animated.timing(opacity, { toValue: 0, duration: 500, useNativeDriver: true }),
+      // Entrance: scale up + fade in
+      Animated.parallel([
+        Animated.spring(scale, { toValue: 1, friction: 6, tension: 80, useNativeDriver: true }),
+        Animated.timing(opacity, { toValue: 1, duration: 500, useNativeDriver: true }),
+      ]),
+      // Breathe pulse
+      Animated.sequence([
+        Animated.timing(scale, { toValue: 1.06, duration: 600, useNativeDriver: true }),
+        Animated.timing(scale, { toValue: 1, duration: 600, useNativeDriver: true }),
+      ]),
+      Animated.delay(400),
+      // Exit: scale down + fade out
+      Animated.parallel([
+        Animated.timing(scale, { toValue: 0.85, duration: 450, useNativeDriver: true }),
+        Animated.timing(opacity, { toValue: 0, duration: 450, useNativeDriver: true }),
+      ]),
     ]).start(() => onFinish());
   }, []);
 
   return (
     <View style={styles.container}>
-      <Animated.View style={{ opacity }}>
+      <Animated.View style={{ opacity, transform: [{ scale }] }}>
         <Image
           source={require('../../assets/Kumva-New-Logo-D.png')}
           style={styles.logo}
@@ -36,8 +50,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  logo: {
-    width: 240,
-    height: 180,
-  },
+  logo: { width: 240, height: 180 },
 });
