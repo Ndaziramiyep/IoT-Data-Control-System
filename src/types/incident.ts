@@ -1,10 +1,7 @@
-export type IncidentSeverity = 'low' | 'medium' | 'high';
-
 export interface Incident {
-  id: string;
-  deviceId: string;
-  message: string;
-  severity: IncidentSeverity;
-  timestamp: number;
-  resolved: boolean;
+  incident_id?: number;
+  device_id: string;
+  start_time: number;
+  end_time?: number | null;
+  max_temperature: number;
 }

@@ -1,6 +1,7 @@
 export interface Reading {
-  id: string;
-  deviceId: string;
+  reading_id?: number;
+  device_id: string;
   temperature: number;
+  humidity?: number | null;
   timestamp: number;
 }

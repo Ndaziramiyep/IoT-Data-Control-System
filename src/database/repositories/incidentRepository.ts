@@ -4,21 +4,32 @@ import { Incident } from '../../types/incident';
 export async function getAllIncidents(): Promise<Incident[]> {
   const db = await getReadyDb();
   if (!db) return [];
-  return db.getAllAsync<Incident>('SELECT * FROM incidents ORDER BY timestamp DESC');
+  return db.getAllAsync<Incident>('SELECT * FROM incidents ORDER BY start_time DESC');
 }
 
-export async function insertIncident(incident: Incident): Promise<void> {
+export async function getIncidentsByDevice(device_id: string): Promise<Incident[]> {
   const db = await getReadyDb();
-  if (!db) return;
-  const { id, deviceId, message, severity, timestamp, resolved } = incident;
-  await db.runAsync(
-    'INSERT INTO incidents (id, deviceId, message, severity, timestamp, resolved) VALUES (?, ?, ?, ?, ?, ?)',
-    id, deviceId, message, severity, timestamp, resolved ? 1 : 0
+  if (!db) return [];
+  return db.getAllAsync<Incident>(
+    'SELECT * FROM incidents WHERE device_id = ? ORDER BY start_time DESC',
+    device_id
   );
 }
 
-export async function resolveIncident(id: string): Promise<void> {
+export async function insertIncident(incident: Omit<Incident, 'incident_id'>): Promise<void> {
   const db = await getReadyDb();
   if (!db) return;
-  await db.runAsync('UPDATE incidents SET resolved = 1 WHERE id = ?', id);
+  await db.runAsync(
+    'INSERT INTO incidents (device_id, start_time, end_time, max_temperature) VALUES (?, ?, ?, ?)',
+    incident.device_id, incident.start_time, incident.end_time ?? null, incident.max_temperature
+  );
+}
+
+export async function closeIncident(incident_id: number, end_time: number): Promise<void> {
+  const db = await getReadyDb();
+  if (!db) return;
+  await db.runAsync(
+    'UPDATE incidents SET end_time = ? WHERE incident_id = ?',
+    end_time, incident_id
+  );
 }
