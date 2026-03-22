@@ -20,7 +20,7 @@ export function useDevices() {
           const current = useAppStore.getState().devices;
           const merged = [...dbDevices];
           current.forEach(d => {
-            if (!merged.find(x => x.id === d.id)) merged.push(d);
+            if (!merged.find(x => x.device_id === d.device_id)) merged.push(d);
           });
           setDevices(merged);
         }
