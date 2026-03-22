@@ -18,6 +18,7 @@ export default function DeviceConfigScreen({ navigation, route }: any) {
   const scanned = route.params?.scannedDevice as { name: string; macAddress: string; category?: string } | null;
 
   const [name, setName] = useState(scanned?.name ?? '');
+  const [macAddress, setMacAddress] = useState(scanned?.macAddress ?? '');
   const [category, setCategory] = useState<DeviceCategory>(
     (scanned?.category as DeviceCategory) ?? 'freezer'
   );
@@ -35,11 +36,17 @@ export default function DeviceConfigScreen({ navigation, route }: any) {
     }
     setSaving(true);
     try {
+      const trimmedMac = macAddress.trim();
+      if (!trimmedMac) {
+        Alert.alert('MAC Address Required', 'Please enter the device MAC address.');
+        setSaving(false);
+        return;
+      }
       const device: Device = {
         id: Date.now().toString(),
         name: trimmedName,
         category,
-        macAddress: scanned?.macAddress ?? '',
+        macAddress: trimmedMac,
         minTemp: Number(lowThreshold),
         maxTemp: Number(highThreshold),
         createdAt: Date.now(),
@@ -84,6 +91,18 @@ export default function DeviceConfigScreen({ navigation, route }: any) {
           placeholderTextColor="#B0B8C8"
           value={name}
           onChangeText={setName}
+        />
+
+        {/* MAC Address */}
+        <Text style={styles.label}>MAC ADDRESS</Text>
+        <TextInput
+          style={[styles.input, !!scanned?.macAddress && styles.inputReadonly]}
+          placeholder="e.g. AA:BB:CC:DD:EE:FF"
+          placeholderTextColor="#B0B8C8"
+          value={macAddress}
+          onChangeText={setMacAddress}
+          autoCapitalize="characters"
+          editable={!scanned?.macAddress}
         />
 
         {/* Category */}
@@ -213,6 +232,10 @@ const styles = StyleSheet.create({
     paddingVertical: 13,
     fontSize: 15,
     color: '#1C1C1E',
+  },
+  inputReadonly: {
+    backgroundColor: '#F4F6FB',
+    color: '#9CA3AF',
   },
 
   select: {
