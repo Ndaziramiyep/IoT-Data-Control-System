@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, ScrollView,
-  StyleSheet, SafeAreaView,
+  StyleSheet, SafeAreaView, ActivityIndicator, Alert,
 } from 'react-native';
 import { insertDevice } from '../../database/repositories/deviceRepository';
 import { useAppStore } from '../../store/store';
@@ -24,20 +24,34 @@ export default function DeviceConfigScreen({ navigation, route }: any) {
   const [highThreshold, setHighThreshold] = useState('0');
   const [lowThreshold, setLowThreshold] = useState('-20');
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   const handleSave = async () => {
-    const device: Device = {
-      id: Date.now().toString(),
-      name: name.trim() || 'Unnamed Device',
-      category,
-      macAddress: scanned?.macAddress ?? '',
-      minTemp: Number(lowThreshold),
-      maxTemp: Number(highThreshold),
-      createdAt: Date.now(),
-    };
-    await insertDevice(device);
-    addDevice(device);
-    navigation.reset({ index: 0, routes: [{ name: 'Main' }] });
+    if (saving) return;
+    const trimmedName = name.trim();
+    if (!trimmedName) {
+      Alert.alert('Device Name Required', 'Please enter a name for this device.');
+      return;
+    }
+    setSaving(true);
+    try {
+      const device: Device = {
+        id: Date.now().toString(),
+        name: trimmedName,
+        category,
+        macAddress: scanned?.macAddress ?? '',
+        minTemp: Number(lowThreshold),
+        maxTemp: Number(highThreshold),
+        createdAt: Date.now(),
+      };
+      await insertDevice(device);
+      addDevice(device);
+      navigation.reset({ index: 0, routes: [{ name: 'Main' }] });
+    } catch (e) {
+      Alert.alert('Error', 'Failed to save device. Please try again.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const selectedLabel = CATEGORIES.find(c => c.value === category)?.label ?? 'Freezer';
@@ -135,10 +149,10 @@ export default function DeviceConfigScreen({ navigation, route }: any) {
           </Text>
         </View>
 
-        {/* Save button */}
-        <TouchableOpacity style={styles.saveBtn} onPress={handleSave} activeOpacity={0.85}>
-          <Text style={styles.saveBtnIcon}>💾</Text>
-          <Text style={styles.saveBtnText}>Save Device</Text>
+        <TouchableOpacity style={[styles.saveBtn, saving && styles.saveBtnDisabled]} onPress={handleSave} activeOpacity={0.85} disabled={saving}>
+          {saving
+            ? <ActivityIndicator color="#fff" />
+            : <><Text style={styles.saveBtnIcon}>💾</Text><Text style={styles.saveBtnText}>Save Device</Text></>}
         </TouchableOpacity>
 
         {/* Cancel */}
@@ -272,6 +286,7 @@ const styles = StyleSheet.create({
   saveBtnIcon: { fontSize: 18 },
   saveBtnText: { color: '#fff', fontSize: 17, fontWeight: '700' },
 
+  saveBtnDisabled: { opacity: 0.7 },
   cancelBtn: { alignItems: 'center', paddingVertical: 8 },
   cancelText: { color: '#9CA3AF', fontSize: 15 },
 });

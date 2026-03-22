@@ -7,7 +7,7 @@ export function useDevices() {
   const setDevices = useAppStore(s => s.setDevices);
 
   useEffect(() => {
-    getAllDevices().then(setDevices);
+    getAllDevices().then(setDevices).catch(console.error);
   }, []);
 
   return { devices };

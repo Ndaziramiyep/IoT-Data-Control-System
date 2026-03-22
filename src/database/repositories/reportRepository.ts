@@ -1,14 +1,18 @@
-import { getDb } from '../db';
+import { getReadyDb } from '../db';
 import { Report } from '../../types/report';
 
 export async function getAllReports(): Promise<Report[]> {
-  return getDb().getAllAsync<Report>('SELECT * FROM reports ORDER BY generatedAt DESC');
+  const db = await getReadyDb();
+  if (!db) return [];
+  return db.getAllAsync<Report>('SELECT * FROM reports ORDER BY generatedAt DESC');
 }
 
 export async function insertReport(report: Report): Promise<void> {
+  const db = await getReadyDb();
+  if (!db) return;
   const { id, deviceId, period, generatedAt, filePath } = report;
-  await getDb().runAsync(
+  await db.runAsync(
     'INSERT INTO reports (id, deviceId, period, generatedAt, filePath) VALUES (?, ?, ?, ?, ?)',
-    [id, deviceId, period, generatedAt, filePath ?? null]
+    id, deviceId, period, generatedAt, filePath ?? null
   );
 }

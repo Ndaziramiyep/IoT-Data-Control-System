@@ -5,7 +5,6 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 
 import DashboardScreen from '../screens/Dashboard/DashboardScreen';
-import AddDeviceScreen from '../screens/AddDevice/AddDeviceScreen';
 import ScannerScreen from '../screens/AddDevice/ScannerScreen';
 import DeviceConfigScreen from '../screens/AddDevice/DeviceConfigScreen';
 import DeviceDetailScreen from '../screens/DeviceDetail/DeviceDetailScreen';
@@ -56,7 +55,7 @@ export default function AppNavigator() {
     <NavigationContainer>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         <Stack.Screen name="Main" component={Tabs} />
-        <Stack.Screen name="AddDevice" component={AddDeviceScreen} />
+        <Stack.Screen name="AddDevice" component={ScannerScreen} />
         <Stack.Screen name="Scanner" component={ScannerScreen} />
         <Stack.Screen name="DeviceConfig" component={DeviceConfigScreen} />
         <Stack.Screen name="DeviceDetail" component={DeviceDetailScreen} />
