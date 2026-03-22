@@ -3,11 +3,12 @@ import { View, TextInput, StyleSheet } from 'react-native';
 import Button from '../common/Button';
 
 interface DeviceConfigFormProps {
+  initialName?: string;
   onSubmit: (name: string, minTemp: number, maxTemp: number) => void;
 }
 
-export default function DeviceConfigForm({ onSubmit }: DeviceConfigFormProps) {
-  const [name, setName] = useState('');
+export default function DeviceConfigForm({ initialName = '', onSubmit }: DeviceConfigFormProps) {
+  const [name, setName] = useState(initialName);
   const [minTemp, setMinTemp] = useState('');
   const [maxTemp, setMaxTemp] = useState('');
 

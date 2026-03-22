@@ -1,32 +1,39 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import KumvaLogo from '../../components/common/KumvaLogo';
+import React, { useEffect } from 'react';
+import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
 import { useDevices } from '../../hooks/useDevices';
 
 export default function DashboardScreen({ navigation }: any) {
   const { devices } = useDevices();
+  const isEmpty = devices.length === 0;
+
+  // Hide/show bottom tab bar based on whether devices exist
+  useEffect(() => {
+    navigation.getParent()?.setOptions({ tabBarStyle: isEmpty ? { display: 'none' } : undefined });
+  }, [isEmpty]);
 
   return (
     <View style={styles.container}>
       {/* Top bar */}
       <View style={styles.topBar}>
-        <KumvaLogo size="small" />
+        <Image
+          source={require('../../../assets/Kumva-New-Logo-D.png')}
+          style={styles.logoImg}
+          resizeMode="contain"
+        />
         <Text style={styles.appTitle}>Kumva Insights</Text>
         <View style={{ width: 40 }} />
       </View>
 
       {/* Empty state */}
-      {devices.length === 0 && (
+      {isEmpty && (
         <View style={styles.emptyWrap}>
-          {/* No-signal icon circle */}
+          {/* No-signal icon */}
           <View style={styles.iconCircle}>
             <View style={styles.noSignal}>
-              {/* diagonal line */}
               <View style={styles.diagLine} />
-              {/* arcs */}
-              <View style={[styles.signalArc, { width: 52, height: 52, borderRadius: 26, top: 14, left: 14 }]} />
-              <View style={[styles.signalArc, { width: 34, height: 34, borderRadius: 17, top: 23, left: 23 }]} />
-              <View style={[styles.signalArc, { width: 16, height: 16, borderRadius: 8, top: 32, left: 32 }]} />
+              <View style={[styles.arc, { width: 52, height: 52, borderRadius: 26, top: 14, left: 14 }]} />
+              <View style={[styles.arc, { width: 34, height: 34, borderRadius: 17, top: 23, left: 23 }]} />
+              <View style={[styles.arc, { width: 16, height: 16, borderRadius: 8, top: 32, left: 32 }]} />
             </View>
           </View>
 
@@ -37,7 +44,6 @@ export default function DashboardScreen({ navigation }: any) {
             incidents and  view real-time data.
           </Text>
 
-          {/* Add Device button */}
           <TouchableOpacity
             style={styles.addBtn}
             onPress={() => navigation.navigate('AddDevice')}
@@ -69,6 +75,7 @@ const styles = StyleSheet.create({
     borderBottomColor: '#E0E0E0',
   },
   appTitle: { fontSize: 18, fontWeight: '700', color: '#1C1C1E' },
+  logoImg: { width: 52, height: 36 },
 
   emptyWrap: {
     flex: 1,
@@ -82,7 +89,7 @@ const styles = StyleSheet.create({
     width: 110,
     height: 110,
     borderRadius: 55,
-    backgroundColor: '#EAEDF5',
+    backgroundColor: '#E8EAF6',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 8,
@@ -98,7 +105,7 @@ const styles = StyleSheet.create({
     transform: [{ rotate: '-45deg' }],
     zIndex: 2,
   },
-  signalArc: {
+  arc: {
     position: 'absolute',
     borderWidth: 3,
     borderColor: '#5C6BC0',

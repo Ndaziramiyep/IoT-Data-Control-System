@@ -1,13 +1,12 @@
-import React, { useEffect } from 'react';
-import { View, StyleSheet, Animated } from 'react-native';
-import KumvaLogo from '../components/common/KumvaLogo';
+import React, { useEffect, useRef } from 'react';
+import { View, Image, StyleSheet, Animated } from 'react-native';
 
 interface SplashScreenProps {
   onFinish: () => void;
 }
 
 export default function SplashScreen({ onFinish }: SplashScreenProps) {
-  const opacity = new Animated.Value(0);
+  const opacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     Animated.sequence([
@@ -20,7 +19,11 @@ export default function SplashScreen({ onFinish }: SplashScreenProps) {
   return (
     <View style={styles.container}>
       <Animated.View style={{ opacity }}>
-        <KumvaLogo size="large" />
+        <Image
+          source={require('../../assets/Kumva-New-Logo-D.png')}
+          style={styles.logo}
+          resizeMode="contain"
+        />
       </Animated.View>
     </View>
   );
@@ -32,5 +35,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#EEF1F8',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  logo: {
+    width: 240,
+    height: 180,
   },
 });
