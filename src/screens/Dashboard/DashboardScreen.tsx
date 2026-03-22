@@ -115,6 +115,13 @@ function CategorySection({ category, devices }: { category: DeviceCategory; devi
     return r && r.length > 0 ? r[0].temperature : null;
   });
 
+  // A device is "active" if it has a reading within the last 5 minutes
+  const ACTIVE_WINDOW_MS = 5 * 60 * 1000;
+  const activeCount = devices.filter(d => {
+    const r = readingsMap[d.device_id];
+    return r && r.length > 0 && Date.now() - r[0].timestamp < ACTIVE_WINDOW_MS;
+  }).length;
+
   const hasGraphData = seriesData.some(s => s.length >= 2);
 
   const DAY_LABELS = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
@@ -128,10 +135,12 @@ function CategorySection({ category, devices }: { category: DeviceCategory; devi
           <Text style={styles.sectionTitle}>{label}</Text>
           <Text style={styles.sectionRange}>{range}</Text>
         </View>
-        <View style={styles.activeBadge}>
-          <View style={styles.activeDot} />
-          <Text style={styles.activeText}>{devices.length} Active</Text>
-        </View>
+        {activeCount > 0 && (
+          <View style={styles.activeBadge}>
+            <View style={styles.activeDot} />
+            <Text style={styles.activeText}>{activeCount} Active</Text>
+          </View>
+        )}
       </View>
 
       <View style={styles.cardGrid}>
