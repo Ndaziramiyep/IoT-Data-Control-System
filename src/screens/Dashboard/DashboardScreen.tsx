@@ -89,7 +89,7 @@ function DeviceCard({ device, lastTemp, hasReading }: { device: Device; lastTemp
 }
 
 // ── Category section ──────────────────────────────────────────────────────────
-function CategorySection({ category, devices }: { category: DeviceCategory; devices: Device[] }) {
+function CategorySection({ category, devices, navigation }: { category: DeviceCategory; devices: Device[]; navigation: any }) {
   const [readingsMap, setReadingsMap] = useState<Record<string, Reading[]>>({});
 
   useEffect(() => {
@@ -145,7 +145,21 @@ function CategorySection({ category, devices }: { category: DeviceCategory; devi
 
       <View style={styles.cardGrid}>
         {devices.map((d, i) => (
-          <DeviceCard key={d.device_id} device={d} lastTemp={lastTemps[i]} hasReading={lastTemps[i] !== null} />
+          <TouchableOpacity
+            key={d.device_id}
+            style={styles.deviceCard}
+            onPress={() => navigation.navigate('DeviceDetail', { deviceId: d.device_id })}
+            activeOpacity={0.8}
+          >
+            <View style={styles.deviceCardRow}>
+              <Text style={styles.deviceName}>{d.name}</Text>
+              <View style={[styles.dot, { backgroundColor: lastTemps[i] !== null ? '#22C55E' : '#D1D5DB' }]} />
+            </View>
+            <Text style={styles.deviceTemp}>
+              {lastTemps[i] !== null ? `${lastTemps[i]!.toFixed(1)} °C` : '-- °C'}
+            </Text>
+            <Text style={styles.deviceMac}>{d.mac_address}</Text>
+          </TouchableOpacity>
         ))}
       </View>
 
@@ -246,10 +260,10 @@ export default function DashboardScreen({ navigation }: any) {
         </View>
       ) : (
         <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-          {freezers.length > 0 && <CategorySection category="freezer" devices={freezers} />}
-          {fridges.length > 0 && <CategorySection category="fridge" devices={fridges} />}
-          {coldRooms.length > 0 && <CategorySection category="cold_room" devices={coldRooms} />}
-          {generalAreas.length > 0 && <CategorySection category="general" devices={generalAreas} />}
+          {freezers.length > 0 && <CategorySection category="freezer" devices={freezers} navigation={navigation} />}
+          {fridges.length > 0 && <CategorySection category="fridge" devices={fridges} navigation={navigation} />}
+          {coldRooms.length > 0 && <CategorySection category="cold_room" devices={coldRooms} navigation={navigation} />}
+          {generalAreas.length > 0 && <CategorySection category="general" devices={generalAreas} navigation={navigation} />}
         </ScrollView>
       )}
     </View>
