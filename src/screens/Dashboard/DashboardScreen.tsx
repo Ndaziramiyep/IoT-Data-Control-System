@@ -229,7 +229,7 @@ export default function DashboardScreen({ navigation }: any) {
             <TouchableOpacity style={styles.addIconBtn} onPress={() => navigation.navigate('AddDevice')}>
               <Text style={styles.addIconText}>＋</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.iconBtn}>
+            <TouchableOpacity style={styles.iconBtn} onPress={() => navigation.navigate('Notifications')}>
               <Text style={styles.iconBtnText}>🔔</Text>
             </TouchableOpacity>
           </View>

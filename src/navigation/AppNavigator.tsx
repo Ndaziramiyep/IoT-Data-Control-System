@@ -11,6 +11,7 @@ import DeviceConfigScreen from '../screens/AddDevice/DeviceConfigScreen';
 import DeviceDetailScreen from '../screens/DeviceDetail/DeviceDetailScreen';
 import IncidentsScreen from '../screens/Incidents/IncidentsScreen';
 import ReportsScreen from '../screens/Reports/ReportsScreen';
+import NotificationsScreen from '../screens/Notifications/NotificationsScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -63,6 +64,7 @@ export default function AppNavigator() {
         <Stack.Screen name="Scanner" component={ScannerScreen} />
         <Stack.Screen name="DeviceConfig" component={DeviceConfigScreen} />
         <Stack.Screen name="DeviceDetail" component={DeviceDetailScreen} />
+        <Stack.Screen name="Notifications" component={NotificationsScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );
