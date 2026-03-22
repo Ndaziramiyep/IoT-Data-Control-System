@@ -158,7 +158,9 @@ function CategorySection({ category, devices, navigation }: { category: DeviceCa
             <Text style={styles.deviceTemp}>
               {lastTemps[i] !== null ? `${lastTemps[i]!.toFixed(1)} °C` : '-- °C'}
             </Text>
-            <Text style={styles.deviceMac}>{d.mac_address}</Text>
+            <Text style={styles.deviceMac}>
+              {d.battery_level != null ? `🔋 ${d.battery_level}%` : '🔋 --'}
+            </Text>
           </TouchableOpacity>
         ))}
       </View>
