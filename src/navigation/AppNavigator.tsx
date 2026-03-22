@@ -2,6 +2,7 @@ import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { Ionicons } from '@expo/vector-icons';
 
 import DashboardScreen from '../screens/Dashboard/DashboardScreen';
 import AddDeviceScreen from '../screens/AddDevice/AddDeviceScreen';
@@ -17,10 +18,34 @@ const Stack = createNativeStackNavigator();
 
 function Tabs() {
   return (
-    <Tab.Navigator screenOptions={{ headerShown: false }}>
+    <Tab.Navigator
+      screenOptions={({ route }) => ({
+        headerShown: false,
+        tabBarActiveTintColor: '#5C6BC0',
+        tabBarInactiveTintColor: '#9CA3AF',
+        tabBarStyle: {
+          backgroundColor: '#fff',
+          borderTopWidth: 1,
+          borderTopColor: '#F0F0F0',
+          height: 64,
+          paddingBottom: 10,
+          paddingTop: 8,
+        },
+        tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
+        tabBarIcon: ({ color, size }) => {
+          const icons: Record<string, keyof typeof Ionicons.glyphMap> = {
+            Dashboard: 'grid-outline',
+            Reports: 'bar-chart-outline',
+            Incidents: 'warning-outline',
+            Notifications: 'notifications-outline',
+          };
+          return <Ionicons name={icons[route.name] ?? 'ellipse-outline'} size={size} color={color} />;
+        },
+      })}
+    >
       <Tab.Screen name="Dashboard" component={DashboardScreen} />
-      <Tab.Screen name="Incidents" component={IncidentsScreen} />
       <Tab.Screen name="Reports" component={ReportsScreen} />
+      <Tab.Screen name="Incidents" component={IncidentsScreen} />
       <Tab.Screen name="Notifications" component={NotificationsScreen} />
     </Tab.Navigator>
   );
