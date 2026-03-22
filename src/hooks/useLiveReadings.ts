@@ -1,13 +1,15 @@
 import { useState, useEffect } from 'react';
 import { Reading } from '../types/reading';
-import { getReadings } from '../services/cacheService';
+import { getReadingsByDevice } from '../database/repositories/readingRepository';
 
 export function useLiveReadings(deviceId: string) {
   const [readings, setReadings] = useState<Reading[]>([]);
 
   useEffect(() => {
-    setReadings(getReadings(deviceId));
-    const interval = setInterval(() => setReadings(getReadings(deviceId)), 5000);
+    const load = () =>
+      getReadingsByDevice(deviceId, 20).then(setReadings).catch(console.error);
+    load();
+    const interval = setInterval(load, 5000);
     return () => clearInterval(interval);
   }, [deviceId]);
 

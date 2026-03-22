@@ -1,93 +1,163 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View, Text, Image, ScrollView, TouchableOpacity, StyleSheet, Dimensions,
 } from 'react-native';
 import { useDevices } from '../../hooks/useDevices';
-import { useLiveReadings } from '../../hooks/useLiveReadings';
+import { getReadingsByDevice } from '../../database/repositories/readingRepository';
 import { Device, DeviceCategory } from '../../types/device';
-import { formatTemperature } from '../../utils/formatters';
+import { Reading } from '../../types/reading';
 
 const { width } = Dimensions.get('window');
-const GRAPH_W = width - 48;
-const GRAPH_H = 80;
+const GRAPH_W = width - 64;
+const GRAPH_H = 100;
+const COLORS = ['#5C6BC0', '#8B5CF6', '#06B6D4', '#F59E0B'];
 
-// ── Sparkline (pure RN, no library) ──────────────────────────────────────────
-function Sparkline({ data, color = '#5C6BC0', threshold }: { data: number[]; color?: string; threshold?: number }) {
-  if (data.length < 2) return <View style={{ height: GRAPH_H }} />;
-  const min = Math.min(...data) - 2;
-  const max = Math.max(...data) + 2;
-  const range = max - min || 1;
-  const step = GRAPH_W / (data.length - 1);
+const CATEGORY_RANGES: Record<DeviceCategory, string> = {
+  freezer: 'Range: -20 to 0°C',
+  fridge: 'Range: 2 to 8°C',
+  cold_room: 'Range: 0 to 10°C',
+};
 
-  const points = data.map((v, i) => ({
-    x: i * step,
-    y: GRAPH_H - ((v - min) / range) * GRAPH_H,
-  }));
+// ── Multi-line graph ──────────────────────────────────────────────────────────
+function MultiLineGraph({
+  seriesData,
+  colors,
+  highThreshold,
+  lowThreshold,
+}: {
+  seriesData: number[][];
+  colors: string[];
+  highThreshold: number;
+  lowThreshold: number;
+}) {
+  const allValues = [...seriesData.flat(), highThreshold, lowThreshold];
+  if (allValues.length === 0) return <View style={{ height: GRAPH_H }} />;
 
-  const thresholdY = threshold !== undefined
-    ? GRAPH_H - ((threshold - min) / range) * GRAPH_H
-    : null;
+  const minV = Math.min(...allValues) - 1;
+  const maxV = Math.max(...allValues) + 1;
+  const range = maxV - minV || 1;
+
+  const toY = (v: number) => GRAPH_H - ((v - minV) / range) * GRAPH_H;
+
+  const highY = toY(highThreshold);
+  const lowY = toY(lowThreshold);
+
+  // Y-axis labels
+  const yLabels = [maxV, (maxV + minV) / 2, minV].map(v => Math.round(v));
 
   return (
-    <View style={{ width: GRAPH_W, height: GRAPH_H }}>
-      {/* Threshold dashed line */}
-      {thresholdY !== null && thresholdY >= 0 && thresholdY <= GRAPH_H && (
-        <View style={[styles.threshLine, { top: thresholdY }]} />
-      )}
-      {/* Line segments */}
-      {points.slice(0, -1).map((p, i) => {
-        const next = points[i + 1];
-        const dx = next.x - p.x;
-        const dy = next.y - p.y;
-        const len = Math.sqrt(dx * dx + dy * dy);
-        const angle = Math.atan2(dy, dx) * (180 / Math.PI);
-        return (
-          <View
-            key={i}
-            style={{
-              position: 'absolute',
-              left: p.x,
-              top: p.y,
-              width: len,
-              height: 2,
-              backgroundColor: color,
-              transformOrigin: '0 50%',
-              transform: [{ rotate: `${angle}deg` }],
-            }}
-          />
-        );
-      })}
+    <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
+      {/* Y-axis */}
+      <View style={{ width: 28, height: GRAPH_H, justifyContent: 'space-between', alignItems: 'flex-end', paddingRight: 4 }}>
+        {yLabels.map((l, i) => (
+          <Text key={i} style={styles.axisLabel}>{l}°</Text>
+        ))}
+      </View>
+
+      {/* Graph area */}
+      <View style={{ width: GRAPH_W, height: GRAPH_H }}>
+        {/* High threshold dashed line (red) */}
+        {highY >= 0 && highY <= GRAPH_H && (
+          <View style={[styles.threshLine, { top: highY, borderColor: '#EF4444' }]} />
+        )}
+        {/* Low threshold dashed line (blue) */}
+        {lowY >= 0 && lowY <= GRAPH_H && (
+          <View style={[styles.threshLine, { top: lowY, borderColor: '#3B82F6' }]} />
+        )}
+
+        {/* Device lines */}
+        {seriesData.map((data, si) => {
+          if (data.length < 2) return null;
+          const step = GRAPH_W / (data.length - 1);
+          const points = data.map((v, i) => ({ x: i * step, y: toY(v) }));
+          return points.slice(0, -1).map((p, i) => {
+            const next = points[i + 1];
+            const dx = next.x - p.x;
+            const dy = next.y - p.y;
+            const len = Math.sqrt(dx * dx + dy * dy);
+            const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+            return (
+              <View
+                key={`${si}-${i}`}
+                style={{
+                  position: 'absolute',
+                  left: p.x,
+                  top: p.y,
+                  width: len,
+                  height: 2,
+                  backgroundColor: colors[si] ?? '#5C6BC0',
+                  transformOrigin: '0 50%',
+                  transform: [{ rotate: `${angle}deg` }],
+                }}
+              />
+            );
+          });
+        })}
+      </View>
     </View>
   );
 }
 
 // ── Device card ───────────────────────────────────────────────────────────────
-function DeviceCard({ device }: { device: Device }) {
-  const { readings } = useLiveReadings(device.id);
-  const temp = readings[0]?.temperature ?? (Math.random() * 10 - 25); // demo fallback
-  const trend = readings.length > 1 ? readings[0].temperature - readings[1].temperature : 0;
-
+function DeviceCard({ device, lastTemp }: { device: Device; lastTemp: number | null }) {
+  const displayTemp = lastTemp ?? null;
   return (
     <View style={styles.deviceCard}>
       <View style={styles.deviceCardRow}>
-        <View style={styles.dot} />
         <Text style={styles.deviceName}>{device.name}</Text>
+        <View style={styles.dot} />
       </View>
-      <Text style={styles.deviceTemp}>{formatTemperature(temp)}</Text>
-      <Text style={styles.deviceTrend}>{trend >= 0 ? `▲ ${trend.toFixed(1)}%` : `▼ ${Math.abs(trend).toFixed(1)}%`}</Text>
+      <Text style={styles.deviceTemp}>
+        {displayTemp !== null
+          ? `${displayTemp > 0 ? '' : ''}${displayTemp.toFixed(1)} °C`
+          : '-- °C'}
+      </Text>
+      <Text style={styles.deviceMac}>{device.macAddress}</Text>
     </View>
   );
 }
 
 // ── Category section ──────────────────────────────────────────────────────────
-function CategorySection({ label, range, devices }: { label: string; range: string; devices: Device[] }) {
-  const mockData = [
-    -18, -19, -17, -20, -18.5, -19.2, -18, -17.5, -19, -18.2,
-    -17, -18.8, -19.5, -18, -17.2, -19, -18.5, -17.8, -19.2, -18,
-  ];
+function CategorySection({ category, devices }: { category: DeviceCategory; devices: Device[] }) {
+  const [readingsMap, setReadingsMap] = useState<Record<string, Reading[]>>({});
+
+  useEffect(() => {
+    devices.forEach(d => {
+      getReadingsByDevice(d.id, 20)
+        .then(r => setReadingsMap(prev => ({ ...prev, [d.id]: r })))
+        .catch(console.error);
+    });
+  }, [devices]);
+
+  const label = category === 'cold_room' ? 'COLD ROOM' : category.toUpperCase();
+  const range = CATEGORY_RANGES[category];
+
+  // Build series: each device gets its own array of temps (oldest→newest)
+  const seriesData = devices.map(d => {
+    const r = readingsMap[d.id] ?? [];
+    return [...r].reverse().map(x => x.temperature);
+  });
+
+  // Thresholds: use first device's thresholds as representative for the category
+  const highThreshold = devices[0]?.maxTemp ?? 0;
+  const lowThreshold = devices[0]?.minTemp ?? -20;
+
+  // Last temp per device
+  const lastTemps = devices.map(d => {
+    const r = readingsMap[d.id];
+    return r && r.length > 0 ? r[0].temperature : null;
+  });
+
+  const hasGraphData = seriesData.some(s => s.length >= 2);
+
+  // X-axis day labels (last N days)
+  const DAY_LABELS = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
+  const today = new Date().getDay(); // 0=Sun
+  const xLabels = Array.from({ length: 7 }, (_, i) => DAY_LABELS[(today - 6 + i + 7) % 7]);
 
   return (
     <View style={styles.section}>
+      {/* Section header */}
       <View style={styles.sectionHeader}>
         <View>
           <Text style={styles.sectionTitle}>{label}</Text>
@@ -99,20 +169,53 @@ function CategorySection({ label, range, devices }: { label: string; range: stri
         </View>
       </View>
 
-      {/* Device cards grid */}
+      {/* Device cards */}
       <View style={styles.cardGrid}>
-        {devices.map(d => <DeviceCard key={d.id} device={d} />)}
+        {devices.map((d, i) => (
+          <DeviceCard key={d.id} device={d} lastTemp={lastTemps[i]} />
+        ))}
       </View>
 
       {/* Graph */}
-      <View style={styles.graphWrap}>
-        <Sparkline data={mockData} color="#5C6BC0" threshold={-17} />
-        <View style={styles.graphLegend}>
-          <View style={styles.legendItem}><View style={[styles.legendDot, { backgroundColor: '#EF4444' }]} /><Text style={styles.legendText}>High Threshold</Text></View>
-          <View style={styles.legendItem}><View style={[styles.legendDot, { backgroundColor: '#3B82F6' }]} /><Text style={styles.legendText}>Low Threshold</Text></View>
+      <View style={styles.graphContainer}>
+        <Text style={styles.graphTitle}>{label}</Text>
+        {hasGraphData ? (
+          <>
+            <MultiLineGraph
+              seriesData={seriesData}
+              colors={COLORS}
+              highThreshold={highThreshold}
+              lowThreshold={lowThreshold}
+            />
+            {/* X-axis */}
+            <View style={styles.xAxis}>
+              <View style={{ width: 28 }} />
+              <View style={{ flex: 1, flexDirection: 'row', justifyContent: 'space-between' }}>
+                {xLabels.map(l => (
+                  <Text key={l} style={styles.axisLabel}>{l}</Text>
+                ))}
+              </View>
+            </View>
+          </>
+        ) : (
+          <View style={styles.noDataWrap}>
+            <Text style={styles.noDataText}>No readings yet</Text>
+          </View>
+        )}
+
+        {/* Legend */}
+        <View style={styles.legend}>
+          <View style={styles.legendItem}>
+            <View style={[styles.legendLine, { backgroundColor: '#EF4444' }]} />
+            <Text style={styles.legendText}>High Threshold</Text>
+          </View>
+          <View style={styles.legendItem}>
+            <View style={[styles.legendLine, { backgroundColor: '#3B82F6' }]} />
+            <Text style={styles.legendText}>Low Threshold</Text>
+          </View>
           {devices.slice(0, 2).map((d, i) => (
             <View key={d.id} style={styles.legendItem}>
-              <View style={[styles.legendDot, { backgroundColor: i === 0 ? '#5C6BC0' : '#8B5CF6' }]} />
+              <View style={[styles.legendLine, { backgroundColor: COLORS[i] }]} />
               <Text style={styles.legendText}>{d.name}</Text>
             </View>
           ))}
@@ -129,7 +232,17 @@ export default function DashboardScreen({ navigation }: any) {
 
   useEffect(() => {
     navigation.getParent()?.setOptions({
-      tabBarStyle: isEmpty ? { display: 'none' } : undefined,
+      tabBarStyle: isEmpty
+        ? { display: 'none' }
+        : {
+            backgroundColor: '#fff',
+            borderTopWidth: 1,
+            borderTopColor: '#F0F0F0',
+            height: 64,
+            paddingBottom: 10,
+            paddingTop: 8,
+            display: 'flex',
+          },
     });
   }, [isEmpty]);
 
@@ -145,7 +258,12 @@ export default function DashboardScreen({ navigation }: any) {
         <Image source={require('../../../assets/Kumva-New-Logo-D.png')} style={styles.logoImg} resizeMode="contain" />
         <Text style={styles.appTitle}>Kumva Insights</Text>
         <View style={styles.topBarIcons}>
-          <TouchableOpacity style={styles.iconBtn}><Text style={styles.iconBtnText}>🔔</Text></TouchableOpacity>
+          <TouchableOpacity style={styles.addIconBtn} onPress={() => navigation.navigate('AddDevice')}>
+            <Text style={styles.addIconText}>＋</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.iconBtn}>
+            <Text style={styles.iconBtnText}>🔔</Text>
+          </TouchableOpacity>
         </View>
       </View>
 
@@ -174,15 +292,9 @@ export default function DashboardScreen({ navigation }: any) {
         </View>
       ) : (
         <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-          {freezers.length > 0 && (
-            <CategorySection label="FREEZER" range="Range: -25 to 5°C" devices={freezers} />
-          )}
-          {fridges.length > 0 && (
-            <CategorySection label="FRIDGE" range="Range: 2 to 8°C" devices={fridges} />
-          )}
-          {coldRooms.length > 0 && (
-            <CategorySection label="COLD ROOM" range="Range: 0 to 10°C" devices={coldRooms} />
-          )}
+          {freezers.length > 0 && <CategorySection category="freezer" devices={freezers} />}
+          {fridges.length > 0 && <CategorySection category="fridge" devices={fridges} />}
+          {coldRooms.length > 0 && <CategorySection category="cold_room" devices={coldRooms} />}
         </ScrollView>
       )}
     </View>
@@ -201,6 +313,11 @@ const styles = StyleSheet.create({
   appTitle: { fontSize: 18, fontWeight: '700', color: '#1C1C1E' },
   logoImg: { width: 52, height: 36 },
   topBarIcons: { flexDirection: 'row', gap: 8 },
+  addIconBtn: {
+    width: 36, height: 36, borderRadius: 10, backgroundColor: '#5C6BC0',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  addIconText: { fontSize: 20, color: '#fff', lineHeight: 24 },
   iconBtn: { width: 36, height: 36, borderRadius: 10, backgroundColor: '#F4F6FB', alignItems: 'center', justifyContent: 'center' },
   iconBtnText: { fontSize: 18 },
 
@@ -210,29 +327,46 @@ const styles = StyleSheet.create({
   section: {
     backgroundColor: '#fff', borderRadius: 16, padding: 16,
     shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 8, elevation: 2,
+    gap: 12,
   },
-  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 },
+  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
   sectionTitle: { fontSize: 13, fontWeight: '800', color: '#1C1C1E', letterSpacing: 0.5 },
   sectionRange: { fontSize: 11, color: '#9CA3AF', marginTop: 2 },
-  activeBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#EEF0FB', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 20 },
+  activeBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: '#EEF0FB', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 20,
+  },
   activeDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#22C55E' },
   activeText: { fontSize: 11, color: '#5C6BC0', fontWeight: '600' },
 
   // ── Device cards ──
-  cardGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 16 },
-  deviceCard: { flex: 1, minWidth: '45%', backgroundColor: '#F8F9FF', borderRadius: 12, padding: 12 },
-  deviceCardRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 },
+  cardGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  deviceCard: {
+    flex: 1, minWidth: '45%', backgroundColor: '#F8F9FF',
+    borderRadius: 12, padding: 12, gap: 4,
+  },
+  deviceCardRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#22C55E' },
-  deviceName: { fontSize: 12, color: '#6B7280', fontWeight: '500', flex: 1 },
+  deviceName: { fontSize: 12, color: '#1C1C1E', fontWeight: '700', flex: 1 },
   deviceTemp: { fontSize: 22, fontWeight: '800', color: '#1C1C1E' },
-  deviceTrend: { fontSize: 11, color: '#9CA3AF', marginTop: 2 },
+  deviceMac: { fontSize: 10, color: '#9CA3AF' },
 
   // ── Graph ──
-  graphWrap: { gap: 8 },
-  threshLine: { position: 'absolute', left: 0, right: 0, height: 1, borderTopWidth: 1, borderColor: '#EF4444', borderStyle: 'dashed' },
-  graphLegend: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 4 },
+  graphContainer: { gap: 8 },
+  graphTitle: { fontSize: 12, fontWeight: '700', color: '#6B7280', letterSpacing: 0.4 },
+  threshLine: {
+    position: 'absolute', left: 0, right: 0, height: 1,
+    borderTopWidth: 1.5, borderStyle: 'dashed',
+  },
+  xAxis: { flexDirection: 'row', marginTop: 4 },
+  axisLabel: { fontSize: 9, color: '#9CA3AF' },
+  noDataWrap: { height: GRAPH_H, alignItems: 'center', justifyContent: 'center' },
+  noDataText: { fontSize: 12, color: '#9CA3AF' },
+
+  // ── Legend ──
+  legend: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  legendDot: { width: 8, height: 8, borderRadius: 4 },
+  legendLine: { width: 16, height: 2, borderRadius: 1 },
   legendText: { fontSize: 10, color: '#9CA3AF' },
 
   // ── Empty state ──

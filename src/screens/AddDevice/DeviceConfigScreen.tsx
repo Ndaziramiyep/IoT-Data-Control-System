@@ -34,14 +34,13 @@ export default function DeviceConfigScreen({ navigation, route }: any) {
       Alert.alert('Device Name Required', 'Please enter a name for this device.');
       return;
     }
+    const trimmedMac = macAddress.trim();
+    if (!trimmedMac) {
+      Alert.alert('MAC Address Required', 'Please enter the device MAC address.');
+      return;
+    }
     setSaving(true);
     try {
-      const trimmedMac = macAddress.trim();
-      if (!trimmedMac) {
-        Alert.alert('MAC Address Required', 'Please enter the device MAC address.');
-        setSaving(false);
-        return;
-      }
       const device: Device = {
         id: Date.now().toString(),
         name: trimmedName,
@@ -51,8 +50,12 @@ export default function DeviceConfigScreen({ navigation, route }: any) {
         maxTemp: Number(highThreshold),
         createdAt: Date.now(),
       };
-      await insertDevice(device);
+      // Persist to SQLite on native (no-op on web)
+      await insertDevice(device).catch(console.error);
+      // Add to Zustand store — this triggers Dashboard re-render
       addDevice(device);
+      // Small delay ensures Zustand state is committed before navigation reset
+      await new Promise(r => setTimeout(r, 50));
       navigation.reset({ index: 0, routes: [{ name: 'Main' }] });
     } catch (e) {
       Alert.alert('Error', 'Failed to save device. Please try again.');
