@@ -3,7 +3,7 @@ import {
   View, Text, TextInput, TouchableOpacity, ScrollView,
   StyleSheet, SafeAreaView, ActivityIndicator, Alert,
 } from 'react-native';
-import { insertDevice, getAllDevices } from '../../database/repositories/deviceRepository';
+import { insertDevice, getAllDevices, updateDevice } from '../../database/repositories/deviceRepository';
 import { useAppStore } from '../../store/store';
 import { Device, DeviceCategory } from '../../types/device';
 
@@ -23,15 +23,23 @@ const CATEGORY_DEFAULTS: Record<DeviceCategory, { low: string; high: string }> =
 
 export default function DeviceConfigScreen({ navigation, route }: any) {
   const addDevice = useAppStore(s => s.addDevice);
+  const updateDeviceStore = useAppStore(s => s.updateDevice);
   const existingDevices = useAppStore(s => s.devices);
   const scanned = route.params?.scannedDevice as { name: string; macAddress: string; category?: string } | null;
+  const isReconfigure: boolean = route.params?.isReconfigure ?? false;
+  const deviceId: string | undefined = route.params?.deviceId;
 
   const initialCategory = (scanned?.category as DeviceCategory) ?? 'freezer';
   const [name, setName] = useState(scanned?.name ?? '');
   const [macAddress, setMacAddress] = useState(scanned?.macAddress ?? '');
   const [category, setCategory] = useState<DeviceCategory>(initialCategory);
-  const [highThreshold, setHighThreshold] = useState(CATEGORY_DEFAULTS[initialCategory].high);
-  const [lowThreshold, setLowThreshold] = useState(CATEGORY_DEFAULTS[initialCategory].low);
+  const existingDevice = existingDevices.find(d => d.device_id === deviceId);
+  const [highThreshold, setHighThreshold] = useState(
+    isReconfigure && existingDevice ? String(existingDevice.temp_high_threshold) : CATEGORY_DEFAULTS[initialCategory].high
+  );
+  const [lowThreshold, setLowThreshold] = useState(
+    isReconfigure && existingDevice ? String(existingDevice.temp_low_threshold) : CATEGORY_DEFAULTS[initialCategory].low
+  );
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -48,20 +56,35 @@ export default function DeviceConfigScreen({ navigation, route }: any) {
       return;
     }
 
-    // Check duplicate in Zustand store (in-session, works on web + native)
-    const duplicateInStore = existingDevices.find(
-      d => d.mac_address.toUpperCase() === trimmedMac
-    );
-    if (duplicateInStore) {
-      Alert.alert(
-        'Device Already Registered',
-        `MAC address ${trimmedMac} is already registered as "${duplicateInStore.name}".`
-      );
-      return;
-    }
-
     setSaving(true);
     try {
+      if (isReconfigure && existingDevice) {
+        const updated: Device = {
+          ...existingDevice,
+          name: trimmedName,
+          category,
+          temp_low_threshold: Number(lowThreshold),
+          temp_high_threshold: Number(highThreshold),
+        };
+        await updateDevice(updated);
+        updateDeviceStore(updated);
+        navigation.goBack();
+        return;
+      }
+
+      // Check duplicate in Zustand store (in-session, works on web + native)
+      const duplicateInStore = existingDevices.find(
+        d => d.mac_address.toUpperCase() === trimmedMac
+      );
+      if (duplicateInStore) {
+        Alert.alert(
+          'Device Already Registered',
+          `MAC address ${trimmedMac} is already registered as "${duplicateInStore.name}".`
+        );
+        setSaving(false);
+        return;
+      }
+
       // Check duplicate in DB (native — catches previous sessions)
       const dbDevices = await getAllDevices();
       const duplicateInDb = dbDevices.find(

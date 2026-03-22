@@ -43,6 +43,20 @@ export async function deleteDevice(device_id: string): Promise<void> {
   await db.runAsync('DELETE FROM devices WHERE device_id = ?', device_id);
 }
 
+export async function updateDevice(device: Device): Promise<void> {
+  if (Platform.OS === 'web') {
+    const existing = webLoadDevices() as Device[];
+    webSaveDevices(existing.map(d => d.device_id === device.device_id ? device : d));
+    return;
+  }
+  const db = await getReadyDb();
+  if (!db) return;
+  await db.runAsync(
+    'UPDATE devices SET name = ?, category = ?, temp_low_threshold = ?, temp_high_threshold = ? WHERE device_id = ?',
+    device.name, device.category, device.temp_low_threshold, device.temp_high_threshold, device.device_id
+  );
+}
+
 export async function updateDeviceSync(device_id: string, last_sync: number, battery_level?: number): Promise<void> {
   if (Platform.OS === 'web') {
     const existing = webLoadDevices() as Device[];

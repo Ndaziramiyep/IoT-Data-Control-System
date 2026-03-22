@@ -306,6 +306,8 @@ export default function DeviceDetailScreen({ navigation, route }: any) {
         <TouchableOpacity
           style={styles.actionBtnOutline}
           onPress={() => navigation.navigate('DeviceConfig', {
+            isReconfigure: true,
+            deviceId: device.device_id,
             scannedDevice: {
               name: device.name,
               macAddress: device.mac_address,
