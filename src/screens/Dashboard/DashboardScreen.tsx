@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
   View, Text, Image, ScrollView, TouchableOpacity,
-  StyleSheet, Animated, Pressable,
+  StyleSheet, Animated, Pressable, SafeAreaView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useDevices } from '../../hooks/useDevices';
@@ -62,14 +62,15 @@ function DeviceGraph({
   const step = (maxV - minV) / 4;
   const yLabels = Array.from({ length: 5 }, (_, i) => Math.round(maxV - i * step));
   const xLabels = getXLabels();
-  const Y_W = 34;
+  const Y_W = 16;
   const hasData = readings.length > 0;
 
   return (
     <View style={gs.graphCard}>
       <Text style={gs.graphDeviceName}>{device.name}</Text>
 
-      <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
+      <View style={{ alignItems: 'center', width: '100%' }}>
+        <View style={{ flexDirection: 'row', alignItems: 'flex-start', width: '100%' }}>
         {/* Y axis labels — outside the box */}
         <View style={{ width: Y_W, height: GRAPH_H, justifyContent: 'space-between', alignItems: 'flex-end', paddingRight: 4 }}>
           {yLabels.map((l, i) => (
@@ -126,13 +127,14 @@ function DeviceGraph({
             </>
           )}
         </View>
-      </View>
+        </View>
 
-      {/* X axis labels — aligned under the plot box */}
-      <View style={{ flexDirection: 'row' }}>
-        <View style={{ width: Y_W }} />
-        <View style={{ flex: 1, flexDirection: 'row', justifyContent: 'space-between', paddingTop: 4 }}>
-          {xLabels.map(l => <Text key={l} style={gs.axisLabel}>{l}</Text>)}
+        {/* X axis labels — aligned under the plot box */}
+        <View style={{ flexDirection: 'row', width: '100%' }}>
+          <View style={{ width: Y_W }} />
+          <View style={{ flex: 1, flexDirection: 'row', justifyContent: 'space-between', paddingTop: 4 }}>
+            {xLabels.map(l => <Text key={l} style={gs.axisLabel}>{l}</Text>)}
+          </View>
         </View>
       </View>
 
@@ -306,7 +308,7 @@ export default function DashboardScreen({ navigation }: any) {
   const generalAreas = byCategory('general');
 
   return (
-    <View style={ms.container}>
+    <SafeAreaView style={ms.container}>
       {/* Top bar */}
       <View style={ms.topBar}>
         <Image source={require('../../../assets/Kumva-New-Logo-D.png')} style={ms.logo} resizeMode="contain" />
@@ -369,7 +371,7 @@ export default function DashboardScreen({ navigation }: any) {
           {generalAreas.length > 0 && <CategorySection category="general"   devices={generalAreas} navigation={navigation} sectionIndex={3} />}
         </ScrollView>
       )}
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -380,7 +382,7 @@ const ms = StyleSheet.create({
   container:  { flex: 1, backgroundColor: '#F4F6FB' },
   topBar: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 16, paddingTop: 52, paddingBottom: 12,
+    paddingHorizontal: 16, paddingVertical: 14,
     backgroundColor: '#fff',
     borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#E5E7EB',
   },
@@ -426,6 +428,7 @@ const dc = StyleSheet.create({
     marginHorizontal: 16, marginBottom: 12,
     backgroundColor: '#fff', borderRadius: 14, padding: 16,
     shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, elevation: 2,
+    alignSelf: 'center', width: '92%',
   },
   row:      { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
   name:     { fontSize: 14, fontWeight: '700', color: '#1C1C1E' },
@@ -441,6 +444,7 @@ const gs = StyleSheet.create({
     marginHorizontal: 16, marginBottom: 24,
     backgroundColor: '#fff', borderRadius: 14, padding: 16,
     shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, elevation: 2,
+    alignSelf: 'center', width: '92%',
   },
   graphDeviceName: { fontSize: 13, fontWeight: '700', color: '#1C1C1E', marginBottom: 10 },
   // Bordered plot box — fills remaining width, fixed height

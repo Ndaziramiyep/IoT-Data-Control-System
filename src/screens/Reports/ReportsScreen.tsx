@@ -313,7 +313,7 @@ export default function ReportsScreen() {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#F4F6FB' },
   header: {
-    paddingTop: 52, paddingBottom: 14, paddingHorizontal: 20,
+    paddingVertical: 14, paddingHorizontal: 20,
     backgroundColor: '#fff',
     borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#E0E0E0',
     alignItems: 'center',
