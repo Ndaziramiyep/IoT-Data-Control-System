@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
   View, Text, Image, ScrollView, TouchableOpacity,
-  StyleSheet, Animated, Pressable, SafeAreaView,
+  StyleSheet, Animated, Pressable, SafeAreaView
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useDevices } from '../../hooks/useDevices';
