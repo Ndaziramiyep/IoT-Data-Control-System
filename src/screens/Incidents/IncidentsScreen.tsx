@@ -4,6 +4,7 @@ import {
   StyleSheet, Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { getAllIncidents } from '../../database/repositories/incidentRepository';
 import { useAppStore } from '../../store/store';
 import { Incident } from '../../types/incident';
@@ -80,7 +81,7 @@ export default function IncidentsScreen({ navigation }: any) {
     <View>
       {/* Search */}
       <View style={styles.searchWrap}>
-        <Text style={styles.searchIcon}>🔍</Text>
+        <Ionicons name="search-outline" size={16} color="#B0B8C8" />
         <TextInput
           style={styles.searchInput}
           placeholder="Search incidents..."
@@ -94,11 +95,11 @@ export default function IncidentsScreen({ navigation }: any) {
       <Text style={styles.sectionTitle}>Recent Activity</Text>
       <View style={styles.exportRow}>
         <TouchableOpacity style={styles.exportBtn} onPress={() => exportAs('PDF')} activeOpacity={0.85}>
-          <Text style={styles.exportIcon}>📄</Text>
+          <Ionicons name="document-text-outline" size={15} color="#fff" />
           <Text style={styles.exportText}>Export as PDF</Text>
         </TouchableOpacity>
         <TouchableOpacity style={[styles.exportBtn, styles.exportBtnSecondary]} onPress={() => exportAs('Excel')} activeOpacity={0.85}>
-          <Text style={styles.exportIcon}>📊</Text>
+          <Ionicons name="grid-outline" size={15} color="#fff" />
           <Text style={styles.exportText}>Export as Excel</Text>
         </TouchableOpacity>
       </View>
@@ -116,7 +117,7 @@ export default function IncidentsScreen({ navigation }: any) {
 
   const renderEmpty = () => (
     <View style={styles.emptyWrap}>
-      <Text style={styles.emptyIcon}>⚠️</Text>
+      <Ionicons name="warning-outline" size={40} color="#D1D5DB" />
       <Text style={styles.emptyText}>No incidents recorded yet</Text>
     </View>
   );
@@ -175,7 +176,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff', borderRadius: 12, borderWidth: 1, borderColor: '#E5E7EB',
     paddingHorizontal: 14, paddingVertical: 11, margin: 16, marginBottom: 8,
   },
-  searchIcon: { fontSize: 14 },
   searchInput: { flex: 1, fontSize: 14, color: '#1C1C1E' },
 
   sectionTitle: { fontSize: 15, fontWeight: '700', color: '#1C1C1E', marginHorizontal: 16, marginBottom: 10 },
@@ -188,7 +188,6 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 3 }, elevation: 4,
   },
   exportBtnSecondary: { backgroundColor: '#7C3AED' },
-  exportIcon: { fontSize: 15 },
   exportText: { color: '#fff', fontSize: 13, fontWeight: '700' },
 
   // Table
@@ -209,6 +208,5 @@ const styles = StyleSheet.create({
   colDur: { flex: 1.5, textAlign: 'right' },
 
   emptyWrap: { alignItems: 'center', paddingTop: 60, gap: 12 },
-  emptyIcon: { fontSize: 40 },
   emptyText: { fontSize: 14, color: '#9CA3AF' },
 });

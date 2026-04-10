@@ -4,6 +4,7 @@ import {
   StyleSheet, ActivityIndicator, Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { insertDevice, getAllDevices, updateDevice } from '../../database/repositories/deviceRepository';
 import { useAppStore } from '../../store/store';
 import { Device, DeviceCategory } from '../../types/device';
@@ -142,7 +143,7 @@ export default function DeviceConfigScreen({ navigation, route }: any) {
       <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
         <View style={styles.banner}>
           <View style={styles.bannerIcon}>
-            <Text style={styles.bannerIconText}>·))</Text>
+            <Ionicons name="bluetooth-outline" size={22} color="#5C6BC0" />
           </View>
           <Text style={styles.bannerText}>New Device Found</Text>
         </View>
@@ -225,7 +226,7 @@ export default function DeviceConfigScreen({ navigation, route }: any) {
         </View>
 
         <View style={styles.infoBox}>
-          <Text style={styles.infoIcon}>ⓘ</Text>
+          <Ionicons name="information-circle-outline" size={18} color="#5C6BC0" style={{ marginTop: 1 }} />
           <Text style={styles.infoText}>
             Setting a proper threshold ensures you receive critical alerts before product spoilage occurs.
             Notifications will be sent to the assigned supervisor.
@@ -235,7 +236,7 @@ export default function DeviceConfigScreen({ navigation, route }: any) {
         <TouchableOpacity style={[styles.saveBtn, saving && styles.saveBtnDisabled]} onPress={handleSave} activeOpacity={0.85} disabled={saving}>
           {saving
             ? <ActivityIndicator color="#fff" />
-            : <><Text style={styles.saveBtnIcon}>💾</Text><Text style={styles.saveBtnText}>Save Device</Text></>}
+            : <><Ionicons name="save-outline" size={18} color="#fff" /><Text style={styles.saveBtnText}>Save Device</Text></>}
         </TouchableOpacity>
 
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.cancelBtn}>
@@ -269,8 +270,7 @@ const styles = StyleSheet.create({
     width: 44, height: 44, borderRadius: 12,
     backgroundColor: '#EEF0FB', alignItems: 'center', justifyContent: 'center',
   },
-  bannerIconText: { fontSize: 16, color: '#5C6BC0', fontWeight: '700' },
-  bannerText: { fontSize: 17, fontWeight: '700', color: '#1C1C1E' },
+  bannerIconText: { fontSize: 16, color: '#5C6BC0', fontWeight: '700' },  bannerText: { fontSize: 17, fontWeight: '700', color: '#1C1C1E' },
   label: { fontSize: 11, fontWeight: '700', color: '#9CA3AF', letterSpacing: 0.8, marginBottom: -4 },
   input: {
     backgroundColor: '#fff', borderRadius: 10, borderWidth: 1, borderColor: '#E5E7EB',
@@ -304,7 +304,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row', gap: 10, backgroundColor: '#EEF0FB',
     borderRadius: 12, padding: 14, alignItems: 'flex-start',
   },
-  infoIcon: { fontSize: 16, color: '#5C6BC0', marginTop: 1 },
   infoText: { flex: 1, fontSize: 13, color: '#4B5563', lineHeight: 20 },
   saveBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
@@ -312,7 +311,6 @@ const styles = StyleSheet.create({
     shadowColor: '#5C6BC0', shadowOpacity: 0.35, shadowRadius: 10,
     shadowOffset: { width: 0, height: 4 }, elevation: 6,
   },
-  saveBtnIcon: { fontSize: 18 },
   saveBtnText: { color: '#fff', fontSize: 17, fontWeight: '700' },
   saveBtnDisabled: { opacity: 0.7 },
   cancelBtn: { alignItems: 'center', paddingVertical: 8 },

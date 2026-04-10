@@ -4,6 +4,7 @@ import {
   ScrollView, Alert, Platform, Modal, FlatList,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { useAppStore } from '../../store/store';
 import { DeviceCategory } from '../../types/device';
 import { getAllReports, insertReport } from '../../database/repositories/reportRepository';
@@ -229,14 +230,14 @@ export default function ReportsScreen() {
           <View style={styles.dateCol}>
             <Text style={styles.dateLabel}>START DATE</Text>
             <TouchableOpacity style={styles.dateInput} onPress={() => setShowStartPicker(true)}>
-              <Text style={styles.dateIcon}>📅</Text>
+              <Ionicons name="calendar-outline" size={16} color="#9CA3AF" />
               <Text style={styles.dateText}>{formatDate(startDate)}</Text>
             </TouchableOpacity>
           </View>
           <View style={styles.dateCol}>
             <Text style={styles.dateLabel}>END DATE</Text>
             <TouchableOpacity style={styles.dateInput} onPress={() => setShowEndPicker(true)}>
-              <Text style={styles.dateIcon}>📅</Text>
+              <Ionicons name="calendar-outline" size={16} color="#9CA3AF" />
               <Text style={styles.dateText}>{formatDate(endDate)}</Text>
             </TouchableOpacity>
           </View>
@@ -246,12 +247,12 @@ export default function ReportsScreen() {
         <TouchableOpacity style={styles.previewBox} onPress={generateReport} activeOpacity={0.8}>
           {!hasGenerated ? (
             <>
-              <Text style={styles.previewIcon}>📊</Text>
+              <Ionicons name="bar-chart-outline" size={36} color="#D1D5DB" />
               <Text style={styles.previewText}>Select filters and dates to generate{'\n'}your report data for export.</Text>
             </>
           ) : reportRows.length === 0 ? (
             <>
-              <Text style={styles.previewIcon}>📭</Text>
+              <Ionicons name="mail-open-outline" size={36} color="#D1D5DB" />
               <Text style={styles.previewText}>No readings found for the selected{'\n'}filters and date range.</Text>
             </>
           ) : (
@@ -285,11 +286,11 @@ export default function ReportsScreen() {
       {/* Export buttons */}
       <View style={styles.exportRow}>
         <TouchableOpacity style={styles.exportBtn} onPress={() => exportAs('PDF')} activeOpacity={0.85}>
-          <Text style={styles.exportIcon}>📄</Text>
+          <Ionicons name="document-text-outline" size={18} color="#fff" />
           <Text style={styles.exportText}>Export PDF</Text>
         </TouchableOpacity>
         <TouchableOpacity style={[styles.exportBtn, styles.exportBtnSecondary]} onPress={() => exportAs('Excel')} activeOpacity={0.85}>
-          <Text style={styles.exportIcon}>📊</Text>
+          <Ionicons name="grid-outline" size={18} color="#fff" />
           <Text style={styles.exportText}>Export Excel</Text>
         </TouchableOpacity>
       </View>
@@ -358,7 +359,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12, paddingVertical: 12,
     flexDirection: 'row', alignItems: 'center', gap: 8,
   },
-  dateIcon: { fontSize: 14 },
   dateText: { fontSize: 14, color: '#1C1C1E' },
 
   previewBox: {
@@ -367,7 +367,6 @@ const styles = StyleSheet.create({
     minHeight: 160, alignItems: 'center', justifyContent: 'center',
     padding: 20, gap: 8,
   },
-  previewIcon: { fontSize: 36, opacity: 0.4 },
   previewText: { fontSize: 13, color: '#9CA3AF', textAlign: 'center', lineHeight: 20 },
   previewSummaryTitle: { fontSize: 14, fontWeight: '700', color: '#1C1C1E' },
   previewSummaryCount: { fontSize: 22, fontWeight: '800', color: '#5C6BC0' },
@@ -392,7 +391,6 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 }, elevation: 5,
   },
   exportBtnSecondary: { backgroundColor: '#7C3AED' },
-  exportIcon: { fontSize: 18 },
   exportText: { color: '#fff', fontSize: 15, fontWeight: '700' },
 });
 

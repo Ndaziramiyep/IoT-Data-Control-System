@@ -4,6 +4,7 @@ import {
   StyleSheet, Alert, Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { useAppStore } from '../../store/store';
 import { getReadingsByDevice } from '../../database/repositories/readingRepository';
 import { getIncidentsByDevice } from '../../database/repositories/incidentRepository';
@@ -94,13 +95,13 @@ function LineGraph({
 }
 
 // ── Stat card ─────────────────────────────────────────────────────────────────
-function StatCard({ icon, label, value, unit, valueColor }: {
-  icon: string; label: string; value: string | number; unit: string; valueColor?: string;
+function StatCard({ iconName, label, value, unit, valueColor, iconColor }: {
+  iconName: keyof typeof Ionicons.glyphMap; label: string; value: string | number; unit: string; valueColor?: string; iconColor?: string;
 }) {
   return (
     <View style={styles.statCard}>
       <View style={styles.statTop}>
-        <Text style={styles.statIcon}>{icon}</Text>
+        <Ionicons name={iconName} size={13} color={iconColor ?? '#9CA3AF'} />
         <Text style={styles.statLabel}>{label}</Text>
       </View>
       <View style={styles.statBottom}>
@@ -226,23 +227,23 @@ export default function DeviceDetailScreen({ navigation, route }: any) {
 
         {/* Top 2 stats: Temp + Humidity */}
         <View style={styles.statsRow}>
-          <StatCard icon="🌡️" label="TEMPERATURE"
+          <StatCard iconName="thermometer-outline" iconColor="#5C6BC0" label="TEMPERATURE"
             value={currentTemp !== null ? currentTemp.toFixed(1) : '--'}
             unit="°C" />
-          <StatCard icon="💧" label="HUMIDITY"
+          <StatCard iconName="water-outline" iconColor="#06B6D4" label="HUMIDITY"
             value={currentHumidity !== null ? Math.round(currentHumidity) : '--'}
             unit="%" />
         </View>
 
         {/* Bottom 3 stats: Battery + Last Sync + Incidents */}
         <View style={styles.statsRow}>
-          <StatCard icon="🔋" label="BATTERY"
+          <StatCard iconName="battery-half-outline" iconColor="#22C55E" label="BATTERY"
             value={device.battery_level ?? '--'}
             unit={device.battery_level != null ? '%' : ''} />
-          <StatCard icon="🔄" label="LAST SYNC"
+          <StatCard iconName="sync-outline" iconColor="#5C6BC0" label="LAST SYNC"
             value={lastSyncMins !== null ? lastSyncMins : '--'}
             unit={lastSyncMins !== null ? 'min' : ''} />
-          <StatCard icon="⚠️" label="INCIDENTS"
+          <StatCard iconName="warning-outline" iconColor="#EF4444" label="INCIDENTS"
             value={incidentCount}
             unit=""
             valueColor={incidentCount > 0 ? '#EF4444' : '#1C1C1E'} />
@@ -300,7 +301,7 @@ export default function DeviceDetailScreen({ navigation, route }: any) {
           disabled={syncing}
           activeOpacity={0.85}
         >
-          <Text style={styles.actionBtnIcon}>🔄</Text>
+          <Ionicons name="sync-outline" size={18} color="#fff" />
           <Text style={styles.actionBtnText}>{syncing ? 'Syncing...' : 'Sync Data'}</Text>
         </TouchableOpacity>
 
@@ -317,7 +318,7 @@ export default function DeviceDetailScreen({ navigation, route }: any) {
           })}
           activeOpacity={0.85}
         >
-          <Text style={styles.actionBtnOutlineIcon}>⚙️</Text>
+          <Ionicons name="settings-outline" size={18} color="#5C6BC0" />
           <Text style={styles.actionBtnOutlineText}>Reconfigure Device</Text>
         </TouchableOpacity>
 
@@ -351,7 +352,6 @@ const styles = StyleSheet.create({
     shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, elevation: 2, gap: 6,
   },
   statTop: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  statIcon: { fontSize: 13 },
   statLabel: { fontSize: 10, fontWeight: '700', color: '#9CA3AF', letterSpacing: 0.5 },
   statBottom: { flexDirection: 'row', alignItems: 'baseline' },
   statValue: { fontSize: 26, fontWeight: '800', color: '#1C1C1E' },
@@ -378,7 +378,6 @@ const styles = StyleSheet.create({
     shadowColor: '#5C6BC0', shadowOpacity: 0.35, shadowRadius: 10,
     shadowOffset: { width: 0, height: 4 }, elevation: 6,
   },
-  actionBtnIcon: { fontSize: 18 },
   actionBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
 
   actionBtnOutline: {
@@ -386,6 +385,5 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff', borderRadius: 14, paddingVertical: 16,
     borderWidth: 1.5, borderColor: '#5C6BC0',
   },
-  actionBtnOutlineIcon: { fontSize: 18 },
   actionBtnOutlineText: { color: '#5C6BC0', fontSize: 16, fontWeight: '700' },
 });
