@@ -1,8 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
   View, Text, Image, ScrollView, TouchableOpacity,
-  StyleSheet, Animated, Pressable, SafeAreaView
+  StyleSheet, Animated, Pressable,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useDevices } from '../../hooks/useDevices';
 import { getReadingsByDevice } from '../../database/repositories/readingRepository';

@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
-  StyleSheet, SafeAreaView, Alert, Dimensions,
+  StyleSheet, Alert, Dimensions,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAppStore } from '../../store/store';
 import { getReadingsByDevice } from '../../database/repositories/readingRepository';
 import { getIncidentsByDevice } from '../../database/repositories/incidentRepository';

@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, ScrollView,
-  StyleSheet, SafeAreaView, ActivityIndicator, Alert,
+  StyleSheet, ActivityIndicator, Alert,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { insertDevice, getAllDevices, updateDevice } from '../../database/repositories/deviceRepository';
 import { useAppStore } from '../../store/store';
 import { Device, DeviceCategory } from '../../types/device';

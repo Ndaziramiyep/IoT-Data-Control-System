@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Linking } from 'react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { initDb } from './src/database/db';
 import AppNavigator from './src/navigation/AppNavigator';
 import SplashScreen from './src/screens/SplashScreen';
@@ -58,13 +59,13 @@ export default function App() {
   }
 
   return (
-    <>
+    <SafeAreaProvider>
       <AppContent />
       <BluetoothPermissionModal
         visible={showBtModal}
         onEnable={handleEnable}
         onCancel={handleCancel}
       />
-    </>
+    </SafeAreaProvider>
   );
 }
