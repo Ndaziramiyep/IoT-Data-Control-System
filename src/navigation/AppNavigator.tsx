@@ -3,6 +3,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAppStore } from '../store/store';
 
 import DashboardScreen from '../screens/Dashboard/DashboardScreen';
@@ -19,13 +20,14 @@ const Stack = createNativeStackNavigator();
 function Tabs() {
   const hasDevices = useAppStore(s => s.devices.length > 0);
 
+  const insets = useSafeAreaInsets();
   const tabBarStyle = hasDevices
     ? {
         backgroundColor: '#fff',
         borderTopWidth: 1,
         borderTopColor: '#F0F0F0',
-        height: 64,
-        paddingBottom: 10,
+        height: 64 + insets.bottom,
+        paddingBottom: 10 + insets.bottom,
         paddingTop: 8,
       }
     : { display: 'none' as const };

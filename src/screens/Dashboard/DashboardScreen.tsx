@@ -309,7 +309,7 @@ export default function DashboardScreen({ navigation }: any) {
   const generalAreas = byCategory('general');
 
   return (
-    <SafeAreaView style={ms.container}>
+    <SafeAreaView style={ms.container} edges={['top']}>
       {/* Top bar */}
       <View style={ms.topBar}>
         <Image source={require('../../../assets/Kumva-New-Logo-D.png')} style={ms.logo} resizeMode="contain" />

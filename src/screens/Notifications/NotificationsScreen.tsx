@@ -185,7 +185,7 @@ export default function NotificationsScreen({ navigation }: any) {
     setNotifications(prev => prev.filter(n => n.id !== id));
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       {/* Header */}
       <Animated.View style={[styles.header, { opacity: headerOpacity, transform: [{ translateY: headerY }] }]}>
         <Pressable

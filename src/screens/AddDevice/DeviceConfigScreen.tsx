@@ -130,7 +130,7 @@ export default function DeviceConfigScreen({ navigation, route }: any) {
   const selectedLabel = CATEGORIES.find(c => c.value === category)?.label ?? 'Freezer';
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
           <Text style={styles.backIcon}>←</Text>
