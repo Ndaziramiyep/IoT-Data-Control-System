@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
-  StyleSheet, Alert, Dimensions,
+  StyleSheet, Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -11,8 +11,6 @@ import { getIncidentsByDevice } from '../../database/repositories/incidentReposi
 import { updateDeviceSync } from '../../database/repositories/deviceRepository';
 import { Reading } from '../../types/reading';
 
-const { width } = Dimensions.get('window');
-const GRAPH_W = width - 64;
 const GRAPH_H = 110;
 const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
@@ -36,6 +34,8 @@ function LineGraph({
   lowThreshold?: number;
   unit: string;
 }) {
+  const [plotWidth, setPlotWidth] = useState(0);
+
   if (data.length < 2) {
     return (
       <View style={{ height: GRAPH_H, alignItems: 'center', justifyContent: 'center' }}>
@@ -53,42 +53,61 @@ function LineGraph({
   const range = maxV - minV || 1;
   const toY = (v: number) => GRAPH_H - ((v - minV) / range) * GRAPH_H;
 
-  const step = GRAPH_W / (data.length - 1);
-  const points = data.map((v, i) => ({ x: i * step, y: toY(v) }));
-
   const yLabels = [maxV, (maxV + minV) / 2, minV].map(v =>
     unit === '%' ? `${Math.round(v)}%` : `${Math.round(v)}°`
   );
 
+  const Y_AXIS_W = 32;
+
   return (
-    <View style={{ flexDirection: 'row' }}>
-      {/* Y axis */}
-      <View style={{ width: 32, height: GRAPH_H, justifyContent: 'space-between', alignItems: 'flex-end', paddingRight: 4 }}>
-        {yLabels.map((l, i) => <Text key={i} style={styles.axisLabel}>{l}</Text>)}
+    <View>
+      <View style={{ flexDirection: 'row' }}>
+        {/* Y axis */}
+        <View style={{ width: Y_AXIS_W, height: GRAPH_H, justifyContent: 'space-between', alignItems: 'flex-end', paddingRight: 4 }}>
+          {yLabels.map((l, i) => <Text key={i} style={styles.axisLabel}>{l}</Text>)}
+        </View>
+        {/* Plot area — measures its own width */}
+        <View
+          style={{ flex: 1, height: GRAPH_H, overflow: 'hidden' }}
+          onLayout={e => setPlotWidth(e.nativeEvent.layout.width)}
+        >
+          {plotWidth > 0 && (() => {
+            const step = plotWidth / (data.length - 1);
+            const points = data.map((v, i) => ({ x: i * step, y: toY(v) }));
+            return (
+              <>
+                {highThreshold !== undefined && (
+                  <View style={[styles.threshLine, { top: toY(highThreshold), borderColor: '#EF4444' }]} />
+                )}
+                {lowThreshold !== undefined && (
+                  <View style={[styles.threshLine, { top: toY(lowThreshold), borderColor: '#3B82F6' }]} />
+                )}
+                {points.slice(0, -1).map((p, i) => {
+                  const next = points[i + 1];
+                  const dx = next.x - p.x;
+                  const dy = next.y - p.y;
+                  const len = Math.sqrt(dx * dx + dy * dy);
+                  const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+                  return (
+                    <View key={i} style={{
+                      position: 'absolute', left: p.x, top: p.y,
+                      width: len, height: 2, backgroundColor: color,
+                      transformOrigin: '0 50%',
+                      transform: [{ rotate: `${angle}deg` }],
+                    }} />
+                  );
+                })}
+              </>
+            );
+          })()}
+        </View>
       </View>
-      {/* Graph */}
-      <View style={{ width: GRAPH_W, height: GRAPH_H }}>
-        {highThreshold !== undefined && (
-          <View style={[styles.threshLine, { top: toY(highThreshold), borderColor: '#EF4444' }]} />
-        )}
-        {lowThreshold !== undefined && (
-          <View style={[styles.threshLine, { top: toY(lowThreshold), borderColor: '#3B82F6' }]} />
-        )}
-        {points.slice(0, -1).map((p, i) => {
-          const next = points[i + 1];
-          const dx = next.x - p.x;
-          const dy = next.y - p.y;
-          const len = Math.sqrt(dx * dx + dy * dy);
-          const angle = Math.atan2(dy, dx) * (180 / Math.PI);
-          return (
-            <View key={i} style={{
-              position: 'absolute', left: p.x, top: p.y,
-              width: len, height: 2, backgroundColor: color,
-              transformOrigin: '0 50%',
-              transform: [{ rotate: `${angle}deg` }],
-            }} />
-          );
-        })}
+      {/* X axis aligned under plot area */}
+      <View style={{ flexDirection: 'row', marginTop: 4 }}>
+        <View style={{ width: Y_AXIS_W }} />
+        <View style={{ flex: 1, flexDirection: 'row', justifyContent: 'space-between' }}>
+          {DAY_LABELS.map(l => <Text key={l} style={styles.axisLabel}>{l}</Text>)}
+        </View>
       </View>
     </View>
   );
@@ -266,13 +285,6 @@ export default function DeviceDetailScreen({ navigation, route }: any) {
             lowThreshold={device.temp_low_threshold}
             unit="°C"
           />
-          {/* X axis */}
-          <View style={styles.xAxis}>
-            <View style={{ width: 32 }} />
-            <View style={{ flex: 1, flexDirection: 'row', justifyContent: 'space-between' }}>
-              {DAY_LABELS.map(l => <Text key={l} style={styles.axisLabel}>{l}</Text>)}
-            </View>
-          </View>
         </View>
 
         {/* Humidity graph */}
@@ -286,12 +298,6 @@ export default function DeviceDetailScreen({ navigation, route }: any) {
             )}
           </View>
           <LineGraph data={humData} color="#06B6D4" unit="%" />
-          <View style={styles.xAxis}>
-            <View style={{ width: 32 }} />
-            <View style={{ flex: 1, flexDirection: 'row', justifyContent: 'space-between' }}>
-              {DAY_LABELS.map(l => <Text key={l} style={styles.axisLabel}>{l}</Text>)}
-            </View>
-          </View>
         </View>
 
         {/* Action buttons */}
@@ -368,7 +374,6 @@ const styles = StyleSheet.create({
   avgText: { fontSize: 11, color: '#5C6BC0', fontWeight: '600' },
 
   threshLine: { position: 'absolute', left: 0, right: 0, height: 1, borderTopWidth: 1.5, borderStyle: 'dashed' },
-  xAxis: { flexDirection: 'row', marginTop: 4 },
   axisLabel: { fontSize: 9, color: '#9CA3AF' },
 
   // Action buttons
