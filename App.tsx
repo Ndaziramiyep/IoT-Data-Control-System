@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Linking } from 'react-native';
+import { Linking, StatusBar } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { initDb } from './src/database/db';
 import AppNavigator from './src/navigation/AppNavigator';
@@ -60,6 +60,7 @@ export default function App() {
 
   return (
     <SafeAreaProvider>
+      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
       <AppContent />
       <BluetoothPermissionModal
         visible={showBtModal}

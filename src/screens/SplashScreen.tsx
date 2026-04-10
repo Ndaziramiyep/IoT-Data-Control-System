@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Image, StyleSheet, Animated } from 'react-native';
+import { View, Image, StyleSheet, Animated, StatusBar } from 'react-native';
 
 interface SplashScreenProps {
   onFinish: () => void;
@@ -32,6 +32,7 @@ export default function SplashScreen({ onFinish }: SplashScreenProps) {
 
   return (
     <View style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
       <Animated.View style={{ opacity, transform: [{ scale }] }}>
         <Image
           source={require('../../assets/Kumva-New-Logo-D.png')}
