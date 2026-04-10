@@ -1,38 +1,30 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Image, StyleSheet, Animated, StatusBar } from 'react-native';
+import { View, Image, StyleSheet, Animated } from 'react-native';
 
-interface SplashScreenProps {
+interface Props {
   onFinish: () => void;
 }
 
-export default function SplashScreen({ onFinish }: SplashScreenProps) {
+export default function SplashScreen({ onFinish }: Props) {
   const opacity = useRef(new Animated.Value(0)).current;
-  const scale = useRef(new Animated.Value(0.75)).current;
+  const scale   = useRef(new Animated.Value(0.8)).current;
 
   useEffect(() => {
     Animated.sequence([
-      // Entrance: scale up + fade in
       Animated.parallel([
-        Animated.spring(scale, { toValue: 1, friction: 6, tension: 80, useNativeDriver: true }),
-        Animated.timing(opacity, { toValue: 1, duration: 500, useNativeDriver: true }),
+        Animated.spring(scale,   { toValue: 1,    friction: 6, tension: 80, useNativeDriver: true }),
+        Animated.timing(opacity, { toValue: 1,    duration: 500,            useNativeDriver: true }),
       ]),
-      // Breathe pulse
-      Animated.sequence([
-        Animated.timing(scale, { toValue: 1.06, duration: 600, useNativeDriver: true }),
-        Animated.timing(scale, { toValue: 1, duration: 600, useNativeDriver: true }),
-      ]),
-      Animated.delay(400),
-      // Exit: scale down + fade out
+      Animated.delay(800),
       Animated.parallel([
-        Animated.timing(scale, { toValue: 0.85, duration: 450, useNativeDriver: true }),
-        Animated.timing(opacity, { toValue: 0, duration: 450, useNativeDriver: true }),
+        Animated.timing(scale,   { toValue: 0.9,  duration: 350,            useNativeDriver: true }),
+        Animated.timing(opacity, { toValue: 0,    duration: 350,            useNativeDriver: true }),
       ]),
     ]).start(() => onFinish());
   }, []);
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
       <Animated.View style={{ opacity, transform: [{ scale }] }}>
         <Image
           source={require('../../assets/Kumva-New-Logo-D.png')}
@@ -51,5 +43,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  logo: { width: 240, height: 180 },
+  logo: { width: 220, height: 160 },
 });

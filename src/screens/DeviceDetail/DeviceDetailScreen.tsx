@@ -12,7 +12,6 @@ import { updateDeviceSync } from '../../database/repositories/deviceRepository';
 import { Reading } from '../../types/reading';
 
 const GRAPH_H = 110;
-const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 function getLastNDaysReadings(readings: Reading[], days: number): Reading[] {
   const cutoff = Date.now() - days * 86400000;
@@ -53,60 +52,84 @@ function LineGraph({
   const range = maxV - minV || 1;
   const toY = (v: number) => GRAPH_H - ((v - minV) / range) * GRAPH_H;
 
-  const yLabels = [maxV, (maxV + minV) / 2, minV].map(v =>
+  const yLabels = [maxV, maxV * 0.75 + minV * 0.25, (maxV + minV) / 2, maxV * 0.25 + minV * 0.75, minV].map(v =>
     unit === '%' ? `${Math.round(v)}%` : `${Math.round(v)}°`
   );
 
-  const Y_AXIS_W = 32;
+  const Y_AXIS_W = 36;
+  const xLabels = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date();
+    d.setDate(d.getDate() - (6 - i));
+    return `${d.toLocaleString('en', { month: 'short' })} ${d.getDate()}`;
+  });
 
   return (
     <View>
-      <View style={{ flexDirection: 'row' }}>
-        {/* Y axis */}
-        <View style={{ width: Y_AXIS_W, height: GRAPH_H, justifyContent: 'space-between', alignItems: 'flex-end', paddingRight: 4 }}>
-          {yLabels.map((l, i) => <Text key={i} style={styles.axisLabel}>{l}</Text>)}
+      <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
+        {/* Y axis labels + ticks */}
+        <View style={{ width: Y_AXIS_W, height: GRAPH_H, justifyContent: 'space-between' }}>
+          {yLabels.map((l, i) => (
+            <View key={i} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end' }}>
+              <Text style={styles.yLabel}>{l}</Text>
+              <View style={styles.yTick} />
+            </View>
+          ))}
         </View>
-        {/* Plot area — measures its own width */}
-        <View
-          style={{ flex: 1, height: GRAPH_H, overflow: 'hidden' }}
-          onLayout={e => setPlotWidth(e.nativeEvent.layout.width)}
-        >
-          {plotWidth > 0 && (() => {
-            const step = plotWidth / (data.length - 1);
-            const points = data.map((v, i) => ({ x: i * step, y: toY(v) }));
-            return (
-              <>
-                {highThreshold !== undefined && (
-                  <View style={[styles.threshLine, { top: toY(highThreshold), borderColor: '#EF4444' }]} />
-                )}
-                {lowThreshold !== undefined && (
-                  <View style={[styles.threshLine, { top: toY(lowThreshold), borderColor: '#3B82F6' }]} />
-                )}
-                {points.slice(0, -1).map((p, i) => {
-                  const next = points[i + 1];
-                  const dx = next.x - p.x;
-                  const dy = next.y - p.y;
-                  const len = Math.sqrt(dx * dx + dy * dy);
-                  const angle = Math.atan2(dy, dx) * (180 / Math.PI);
-                  return (
-                    <View key={i} style={{
-                      position: 'absolute', left: p.x, top: p.y,
-                      width: len, height: 2, backgroundColor: color,
-                      transformOrigin: '0 50%',
-                      transform: [{ rotate: `${angle}deg` }],
-                    }} />
-                  );
-                })}
-              </>
-            );
-          })()}
-        </View>
-      </View>
-      {/* X axis aligned under plot area */}
-      <View style={{ flexDirection: 'row', marginTop: 4 }}>
-        <View style={{ width: Y_AXIS_W }} />
-        <View style={{ flex: 1, flexDirection: 'row', justifyContent: 'space-between' }}>
-          {DAY_LABELS.map(l => <Text key={l} style={styles.axisLabel}>{l}</Text>)}
+
+        {/* Y axis line + plot */}
+        <View style={{ flex: 1 }}>
+          <View style={{ flexDirection: 'row', height: GRAPH_H }}>
+            {/* Visible Y axis line */}
+            <View style={styles.yAxisLine} />
+
+            {/* Plot area */}
+            <View
+              style={{ flex: 1, height: GRAPH_H }}
+              onLayout={e => setPlotWidth(e.nativeEvent.layout.width)}
+            >
+              {plotWidth > 0 && (() => {
+                const step = plotWidth / (data.length - 1);
+                const points = data.map((v, i) => ({ x: i * step, y: toY(v) }));
+                return (
+                  <>
+                    {yLabels.map((_, i) => (
+                      <View key={i} style={[styles.gridLine, { top: (i / (yLabels.length - 1)) * GRAPH_H }]} />
+                    ))}
+                    {highThreshold !== undefined && (
+                      <View style={[styles.threshLine, { top: toY(highThreshold), borderColor: '#EF4444' }]} />
+                    )}
+                    {lowThreshold !== undefined && (
+                      <View style={[styles.threshLine, { top: toY(lowThreshold), borderColor: '#3B82F6' }]} />
+                    )}
+                    {points.slice(0, -1).map((p, i) => {
+                      const next = points[i + 1];
+                      const dx = next.x - p.x; const dy = next.y - p.y;
+                      const len = Math.sqrt(dx * dx + dy * dy);
+                      const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+                      return (
+                        <View key={i} style={{
+                          position: 'absolute', left: p.x, top: p.y,
+                          width: len, height: 2, backgroundColor: color,
+                          transformOrigin: '0 50%',
+                          transform: [{ rotate: `${angle}deg` }],
+                        }} />
+                      );
+                    })}
+                  </>
+                );
+              })()}
+            </View>
+          </View>
+
+          {/* Visible X axis line */}
+          <View style={styles.xAxisLine} />
+
+          {/* X labels */}
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 4 }}>
+            {xLabels.map((l, i) => (
+              <Text key={i} style={styles.xLabel}>{l}</Text>
+            ))}
+          </View>
         </View>
       </View>
     </View>
@@ -152,10 +175,10 @@ export default function DeviceDetailScreen({ navigation, route }: any) {
       <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
         <View style={styles.header}>
           <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
-            <Text style={styles.backIcon}>←</Text>
+            <Ionicons name="arrow-back" size={22} color="#1C1C1E" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Device</Text>
-          <View style={{ width: 36 }} />
+          <View style={{ width: 44 }} />
         </View>
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
           <Text style={{ color: '#9CA3AF' }}>Device not found</Text>
@@ -236,10 +259,10 @@ export default function DeviceDetailScreen({ navigation, route }: any) {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
-          <Text style={styles.backIcon}>←</Text>
+          <Ionicons name="arrow-back" size={22} color="#1C1C1E" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{categoryLabel}</Text>
-        <View style={{ width: 36 }} />
+        <View style={{ width: 44 }} />
       </View>
 
       <ScrollView contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
@@ -343,10 +366,9 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#E0E0E0',
   },
   backBtn: {
-    width: 36, height: 36, borderRadius: 10, backgroundColor: '#F4F6FB',
+    width: 44, height: 44, borderRadius: 12, backgroundColor: '#F4F6FB',
     alignItems: 'center', justifyContent: 'center',
   },
-  backIcon: { fontSize: 18, color: '#1C1C1E' },
   headerTitle: { fontSize: 16, fontWeight: '800', color: '#1C1C1E', letterSpacing: 0.5 },
 
   body: { padding: 16, gap: 14, paddingBottom: 40 },
@@ -365,7 +387,7 @@ const styles = StyleSheet.create({
 
   // Graph card
   graphCard: {
-    backgroundColor: '#fff', borderRadius: 14, padding: 16,
+    backgroundColor: '#fff', borderRadius: 20, padding: 16,
     shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, elevation: 2, gap: 10,
   },
   graphCardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
@@ -374,7 +396,12 @@ const styles = StyleSheet.create({
   avgText: { fontSize: 11, color: '#5C6BC0', fontWeight: '600' },
 
   threshLine: { position: 'absolute', left: 0, right: 0, height: 1, borderTopWidth: 1.5, borderStyle: 'dashed' },
-  axisLabel: { fontSize: 9, color: '#9CA3AF' },
+  gridLine:   { position: 'absolute', left: 0, right: 0, height: StyleSheet.hairlineWidth, backgroundColor: '#E5E7EB' },
+  yLabel:     { fontSize: 9, color: '#9CA3AF', textAlign: 'right', minWidth: 28 },
+  yTick:      { width: 4, height: 1, backgroundColor: '#9CA3AF', marginLeft: 2 },
+  yAxisLine:  { width: 1.5, height: GRAPH_H, backgroundColor: '#9CA3AF' },
+  xAxisLine:  { height: 1.5, backgroundColor: '#9CA3AF' },
+  xLabel:     { fontSize: 8, color: '#9CA3AF', textAlign: 'center' },
 
   // Action buttons
   actionBtn: {

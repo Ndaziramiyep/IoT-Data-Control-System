@@ -126,11 +126,7 @@ export default function IncidentsScreen({ navigation }: any) {
     <SafeAreaView style={styles.safe} edges={['top']}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
-          <Text style={styles.backIcon}>←</Text>
-        </TouchableOpacity>
         <Text style={styles.headerTitle}>Incidents</Text>
-        <View style={{ width: 36 }} />
       </View>
 
       <FlatList
@@ -157,16 +153,11 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#F4F6FB' },
 
   header: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 16, paddingVertical: 14,
     backgroundColor: '#fff',
     borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#E0E0E0',
+    alignItems: 'center',
   },
-  backBtn: {
-    width: 36, height: 36, borderRadius: 10, backgroundColor: '#F4F6FB',
-    alignItems: 'center', justifyContent: 'center',
-  },
-  backIcon: { fontSize: 18, color: '#1C1C1E' },
   headerTitle: { fontSize: 18, fontWeight: '700', color: '#1C1C1E' },
 
   list: { paddingBottom: 32 },

@@ -10,7 +10,8 @@ import { getReadingsByDevice } from '../../database/repositories/readingReposito
 import { Device, DeviceCategory } from '../../types/device';
 import { Reading } from '../../types/reading';
 
-const GRAPH_H = 130;
+const GRAPH_H = 140;
+const Y_W = 28;
 
 const CATEGORY_RANGES: Record<DeviceCategory, string> = {
   freezer:   'Range: -20 to 0°C',
@@ -18,6 +19,8 @@ const CATEGORY_RANGES: Record<DeviceCategory, string> = {
   cold_room: 'Range: 0 to 10°C',
   general:   'Range: 15 to 30°C',
 };
+
+const LINE_COLORS = ['#5C6BC0', '#06B6D4', '#F59E0B', '#22C55E', '#EF4444', '#A855F7'];
 
 function getXLabels(): string[] {
   return Array.from({ length: 7 }, (_, i) => {
@@ -27,17 +30,9 @@ function getXLabels(): string[] {
   });
 }
 
-// ── Device graph ──────────────────────────────────────────────────────────────
-function DeviceGraph({
-  device, readings,
-}: {
-  device: Device;
-  readings: Reading[];
-}) {
-  const [plotWidth, setPlotWidth] = useState(0);
+function getDailyAvgs(readings: Reading[]): (number | null)[] {
   const now = Date.now();
-
-  const dailyAvgs = Array.from({ length: 7 }, (_, i) => {
+  return Array.from({ length: 7 }, (_, i) => {
     const dayStart = now - (6 - i) * 86400000;
     const dayEnd   = dayStart + 86400000;
     const vals = readings
@@ -45,96 +40,125 @@ function DeviceGraph({
       .map(r => r.temperature);
     return vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
   });
+}
 
-  const filled = [...dailyAvgs];
+function fillNulls(arr: (number | null)[]): number[] {
+  const filled = [...arr];
   for (let i = 0; i < filled.length; i++) {
     if (filled[i] === null) filled[i] = filled[i - 1] ?? filled[i + 1] ?? 0;
   }
-  const data = filled as number[];
+  return filled as number[];
+}
 
-  const high = device.temp_high_threshold;
-  const low  = device.temp_low_threshold;
-  const allVals = [...data, high, low];
-  const minV = Math.min(...allVals) - 3;
-  const maxV = Math.max(...allVals) + 3;
+// ── Combined category graph ───────────────────────────────────────────────────
+function CategoryGraph({
+  devices, readingsMap,
+}: {
+  devices: Device[];
+  readingsMap: Record<string, Reading[]>;
+}) {
+  const [plotWidth, setPlotWidth] = useState(0);
+  const xLabels = getXLabels();
+
+  const seriesData = devices.map((d, idx) => ({
+    device: d,
+    data: fillNulls(getDailyAvgs(readingsMap[d.device_id] ?? [])),
+    color: LINE_COLORS[idx % LINE_COLORS.length],
+  }));
+
+  // Global min/max across all devices + thresholds
+  const allVals = seriesData.flatMap(s => [
+    ...s.data,
+    s.device.temp_high_threshold,
+    s.device.temp_low_threshold,
+  ]);
+  const minV = Math.min(...allVals) - 2;
+  const maxV = Math.max(...allVals) + 2;
   const range = maxV - minV || 1;
   const toY = (v: number) => GRAPH_H - ((v - minV) / range) * GRAPH_H;
 
-  const step = (maxV - minV) / 4;
-  const yLabels = Array.from({ length: 5 }, (_, i) => Math.round(maxV - i * step));
-  const xLabels = getXLabels();
-  const Y_W = 16;
-  const hasData = readings.length > 0;
+  const yStep = (maxV - minV) / 4;
+  const yLabels = Array.from({ length: 5 }, (_, i) => Math.round(maxV - i * yStep));
+
+  // Collect unique threshold pairs to avoid duplicate lines
+  const thresholds: { high: number; low: number; color: string }[] = [];
+  seriesData.forEach(s => {
+    const exists = thresholds.find(
+      t => t.high === s.device.temp_high_threshold && t.low === s.device.temp_low_threshold
+    );
+    if (!exists) thresholds.push({ high: s.device.temp_high_threshold, low: s.device.temp_low_threshold, color: s.color });
+  });
 
   return (
     <View style={gs.graphCard}>
-      <Text style={gs.graphDeviceName}>{device.name}</Text>
+      <Text style={gs.graphTitle}>Temperature Overview (Last 7 Days)</Text>
 
-      <View style={{ alignItems: 'center', width: '100%' }}>
-        <View style={{ flexDirection: 'row', alignItems: 'flex-start', width: '100%' }}>
-        {/* Y axis labels — outside the box */}
-        <View style={{ width: Y_W, height: GRAPH_H, justifyContent: 'space-between', alignItems: 'flex-end', paddingRight: 4 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
+        {/* Y axis labels + line */}
+        <View style={{ width: Y_W, height: GRAPH_H, justifyContent: 'space-between' }}>
           {yLabels.map((l, i) => (
-            <Text key={i} style={gs.axisLabel}>{l}°</Text>
+            <View key={i} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end' }}>
+              <Text style={gs.yLabel}>{l}°</Text>
+              <View style={gs.yTick} />
+            </View>
           ))}
         </View>
 
-        {/* Bordered plot box */}
-        <View
-          style={gs.plotBox}
-          onLayout={e => setPlotWidth(e.nativeEvent.layout.width)}
-        >
-          {plotWidth > 0 && (
-            <>
-              {/* Grid lines */}
-              {yLabels.map((_, i) => (
-                <View key={i} style={[gs.gridLine, { top: (i / (yLabels.length - 1)) * GRAPH_H }]} />
-              ))}
+        {/* Y axis vertical line + plot */}
+        <View style={{ flex: 1 }}>
+          <View style={{ flexDirection: 'row', height: GRAPH_H }}>
+            {/* Y axis line */}
+            <View style={gs.yAxisLine} />
 
-              {/* Threshold lines */}
-              <View style={[gs.threshLine, { top: toY(high), borderColor: '#EF4444' }]} />
-              <View style={[gs.threshLine, { top: toY(low),  borderColor: '#3B82F6' }]} />
-
-              {/* Data line */}
-              {hasData && data.length >= 2 && (() => {
-                const ptStep = plotWidth / (data.length - 1);
-                const pts = data.map((v, i) => ({ x: i * ptStep, y: toY(v) }));
-                return pts.slice(0, -1).map((p, i) => {
-                  const nx = pts[i + 1];
-                  const dx = nx.x - p.x;
-                  const dy = nx.y - p.y;
-                  const len = Math.sqrt(dx * dx + dy * dy);
-                  const angle = Math.atan2(dy, dx) * (180 / Math.PI);
-                  return (
-                    <View
-                      key={i}
-                      style={{
-                        position: 'absolute', left: p.x, top: p.y,
-                        width: len, height: 1.5,
-                        backgroundColor: '#1C1C1E',
-                        transformOrigin: '0 50%',
-                        transform: [{ rotate: `${angle}deg` }],
-                      }}
-                    />
-                  );
-                });
-              })()}
-
-              {!hasData && (
-                <View style={{ position: 'absolute', inset: 0, alignItems: 'center', justifyContent: 'center' }}>
-                  <Text style={gs.noDataText}>No readings yet</Text>
-                </View>
+            {/* Plot area */}
+            <View
+              style={{ flex: 1, height: GRAPH_H }}
+              onLayout={e => setPlotWidth(e.nativeEvent.layout.width)}
+            >
+              {plotWidth > 0 && (
+                <>
+                  {yLabels.map((_, i) => (
+                    <View key={i} style={[gs.gridLine, { top: (i / (yLabels.length - 1)) * GRAPH_H }]} />
+                  ))}
+                  {thresholds.map((t, i) => (
+                    <React.Fragment key={i}>
+                      <View style={[gs.threshLine, { top: toY(t.high), borderColor: '#EF4444' }]} />
+                      <View style={[gs.threshLine, { top: toY(t.low), borderColor: '#3B82F6' }]} />
+                    </React.Fragment>
+                  ))}
+                  {seriesData.map(s => {
+                    const ptStep = plotWidth / (s.data.length - 1);
+                    const pts = s.data.map((v, i) => ({ x: i * ptStep, y: toY(v) }));
+                    return pts.slice(0, -1).map((p, i) => {
+                      const nx = pts[i + 1];
+                      const dx = nx.x - p.x; const dy = nx.y - p.y;
+                      const len = Math.sqrt(dx * dx + dy * dy);
+                      const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+                      return (
+                        <View key={`${s.device.device_id}-${i}`} style={{
+                          position: 'absolute', left: p.x, top: p.y,
+                          width: len, height: 2, backgroundColor: s.color,
+                          transformOrigin: '0 50%',
+                          transform: [{ rotate: `${angle}deg` }],
+                        }} />
+                      );
+                    });
+                  })}
+                </>
               )}
-            </>
-          )}
-        </View>
-        </View>
+            </View>
+          </View>
 
-        {/* X axis labels — aligned under the plot box */}
-        <View style={{ flexDirection: 'row', width: '100%' }}>
-          <View style={{ width: Y_W }} />
-          <View style={{ flex: 1, flexDirection: 'row', justifyContent: 'space-between', paddingTop: 4 }}>
-            {xLabels.map(l => <Text key={l} style={gs.axisLabel}>{l}</Text>)}
+          {/* X axis line */}
+          <View style={gs.xAxisLine} />
+
+          {/* X labels */}
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 4 }}>
+            {xLabels.map((l, i) => (
+              <View key={i} style={{ alignItems: 'center' }}>
+                <Text style={gs.xLabel}>{l}</Text>
+              </View>
+            ))}
           </View>
         </View>
       </View>
@@ -142,51 +166,93 @@ function DeviceGraph({
       {/* Legend */}
       <View style={gs.legend}>
         <View style={gs.legendItem}>
-          <View style={[gs.legendDot, { backgroundColor: '#EF4444' }]} />
-          <Text style={gs.legendText}>High Temperature Threshold</Text>
+          <View style={[gs.legendDash, { borderColor: '#EF4444' }]} />
+          <Text style={gs.legendText}>High Threshold</Text>
         </View>
         <View style={gs.legendItem}>
-          <View style={[gs.legendDot, { backgroundColor: '#3B82F6' }]} />
-          <Text style={gs.legendText}>Low Temperature Threshold</Text>
+          <View style={[gs.legendDash, { borderColor: '#3B82F6' }]} />
+          <Text style={gs.legendText}>Low Threshold</Text>
         </View>
-        <View style={gs.legendItem}>
-          <View style={[gs.legendLine, { backgroundColor: '#1C1C1E' }]} />
-          <Text style={gs.legendText}>{device.name}</Text>
-        </View>
+        {seriesData.map(s => (
+          <View key={s.device.device_id} style={gs.legendItem}>
+            <View style={[gs.legendLine, { backgroundColor: s.color }]} />
+            <Text style={gs.legendText}>{s.device.name}</Text>
+          </View>
+        ))}
       </View>
     </View>
   );
 }
 
-// ── Device card ───────────────────────────────────────────────────────────────
+// ── Device grid card ──────────────────────────────────────────────────────────
 function DeviceCard({
-  device, lastTemp, isActive, onPress,
+  device, lastTemp, lastHumidity, isActive, onPress,
 }: {
   device: Device;
   lastTemp: number | null;
+  lastHumidity: number | null;
   isActive: boolean;
   onPress: () => void;
 }) {
   const scale = useRef(new Animated.Value(1)).current;
+
+  const tempColor = lastTemp === null ? '#D1D5DB'
+    : lastTemp > device.temp_high_threshold ? '#EF4444'
+    : lastTemp < device.temp_low_threshold  ? '#3B82F6'
+    : '#22C55E';
+
   return (
     <Pressable
+      style={{ flex: 1 }}
       onPress={onPress}
-      onPressIn={() => Animated.spring(scale, { toValue: 0.97, useNativeDriver: true, friction: 8 }).start()}
+      onPressIn={() => Animated.spring(scale, { toValue: 0.96, useNativeDriver: true, friction: 8 }).start()}
       onPressOut={() => Animated.spring(scale, { toValue: 1,    useNativeDriver: true, friction: 6 }).start()}
     >
       <Animated.View style={[dc.card, { transform: [{ scale }] }]}>
-        <View style={dc.row}>
-          <Text style={dc.name}>{device.name}</Text>
+        {/* Header: name + status dot */}
+        <View style={dc.topRow}>
+          <Text style={dc.name} numberOfLines={1}>{device.name}</Text>
           <View style={[dc.dot, { backgroundColor: isActive ? '#22C55E' : '#D1D5DB' }]} />
         </View>
-        <Text style={dc.temp}>
-          {lastTemp !== null
-            ? <Text>{'℉ '}<Text style={dc.tempBig}>{Math.abs(lastTemp).toFixed(1)}</Text>{'°C'}</Text>
-            : '-- °C'}
-        </Text>
-        <Text style={dc.battery}>
-          🔋 {device.battery_level != null ? `${device.battery_level}%` : '--'}
-        </Text>
+
+        {/* Temp + Humidity row */}
+        <View style={dc.statsRow}>
+          <View style={dc.statCol}>
+            <View style={dc.metricRow}>
+              <Ionicons name="thermometer-outline" size={11} color={tempColor} />
+              <Text style={dc.metricLabel}>TEMP</Text>
+            </View>
+            <View style={dc.valueRow}>
+              <Text style={[dc.valueBig, { color: tempColor }]}>
+                {lastTemp !== null ? lastTemp.toFixed(1) : '--'}
+              </Text>
+              {lastTemp !== null && <Text style={dc.valueUnit}>°C</Text>}
+            </View>
+          </View>
+
+          <View style={dc.statDivider} />
+
+          <View style={dc.statCol}>
+            <View style={dc.metricRow}>
+              <Ionicons name="water-outline" size={11} color="#06B6D4" />
+              <Text style={dc.metricLabel}>HUM</Text>
+            </View>
+            <View style={dc.valueRow}>
+              <Text style={[dc.valueBig, { color: '#06B6D4' }]}>
+                {lastHumidity !== null ? Math.round(lastHumidity) : '--'}
+              </Text>
+              {lastHumidity !== null && <Text style={dc.valueUnit}>%</Text>}
+            </View>
+          </View>
+        </View>
+
+        {/* Battery */}
+        <View style={dc.batteryRow}>
+          <Ionicons name="battery-half-outline" size={12} color="#9CA3AF" />
+          <Text style={dc.battery}>
+            {device.battery_level != null ? `${device.battery_level}%` : '--'}
+          </Text>
+        </View>
       </Animated.View>
     </Pressable>
   );
@@ -230,9 +296,15 @@ function CategorySection({
     return r && r.length > 0 && Date.now() - r[0].timestamp < ACTIVE_WINDOW_MS;
   }).length;
 
+  // Pair devices into rows of 2
+  const rows: Device[][] = [];
+  for (let i = 0; i < devices.length; i += 2) {
+    rows.push(devices.slice(i, i + 2));
+  }
+
   return (
     <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
-      {/* ── Category header ── */}
+      {/* Category header */}
       <View style={cs.catHeader}>
         <View>
           <Text style={cs.catLabel}>{label}</Text>
@@ -246,23 +318,34 @@ function CategorySection({
         )}
       </View>
 
-      {/* ── Per-device: card then graph ── */}
-      {devices.map(d => {
-        const readings = readingsMap[d.device_id] ?? [];
-        const lastTemp = readings.length > 0 ? readings[0].temperature : null;
-        const isActive = readings.length > 0 && Date.now() - readings[0].timestamp < ACTIVE_WINDOW_MS;
-        return (
-          <View key={d.device_id}>
-            <DeviceCard
-              device={d}
-              lastTemp={lastTemp}
-              isActive={isActive}
-              onPress={() => navigation.navigate('DeviceDetail', { deviceId: d.device_id })}
-            />
-            <DeviceGraph device={d} readings={readings} />
+      {/* Device grid */}
+      <View style={cs.grid}>
+        {rows.map((row, ri) => (
+          <View key={ri} style={cs.gridRow}>
+            {row.map(d => {
+              const readings = readingsMap[d.device_id] ?? [];
+              const lastTemp     = readings.length > 0 ? readings[0].temperature : null;
+              const lastHumidity = readings.length > 0 ? (readings[0].humidity ?? null) : null;
+              const isActive = readings.length > 0 && Date.now() - readings[0].timestamp < ACTIVE_WINDOW_MS;
+              return (
+                <DeviceCard
+                  key={d.device_id}
+                  device={d}
+                  lastTemp={lastTemp}
+                  lastHumidity={lastHumidity}
+                  isActive={isActive}
+                  onPress={() => navigation.navigate('DeviceDetail', { deviceId: d.device_id })}
+                />
+              );
+            })}
+            {/* Fill empty slot if odd number */}
+            {row.length === 1 && <View style={{ flex: 1 }} />}
           </View>
-        );
-      })}
+        ))}
+      </View>
+
+      {/* One combined graph for all devices in this category */}
+      <CategoryGraph devices={devices} readingsMap={readingsMap} />
     </Animated.View>
   );
 }
@@ -353,6 +436,7 @@ export default function DashboardScreen({ navigation }: any) {
             by connecting your first BLE sensor.
           </Text>
           <Pressable
+            style={ms.addDeviceBtnWrap}
             onPress={() => navigation.navigate('AddDevice')}
             onPressIn={() => Animated.spring(addBtnScale, { toValue: 0.96, useNativeDriver: true, friction: 8 }).start()}
             onPressOut={() => Animated.spring(addBtnScale, { toValue: 1,    useNativeDriver: true, friction: 6 }).start()}
@@ -378,7 +462,6 @@ export default function DashboardScreen({ navigation }: any) {
 
 // ── Styles ────────────────────────────────────────────────────────────────────
 
-// Main screen
 const ms = StyleSheet.create({
   container:  { flex: 1, backgroundColor: '#F4F6FB' },
   topBar: {
@@ -400,71 +483,72 @@ const ms = StyleSheet.create({
   arc:        { position: 'absolute', borderWidth: 3, borderColor: '#5C6BC0', borderBottomColor: 'transparent', borderLeftColor: 'transparent', borderRightColor: 'transparent' },
   emptyTitle: { fontSize: 22, fontWeight: '800', color: '#1C1C1E', textAlign: 'center' },
   emptySubtitle: { fontSize: 14, color: '#6B7280', textAlign: 'center', lineHeight: 22 },
+  addDeviceBtnWrap: { alignSelf: 'stretch', marginTop: 8 },
   addDeviceBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    backgroundColor: '#5C6BC0', borderRadius: 14, paddingVertical: 16, paddingHorizontal: 32,
-    width: '100%', marginTop: 8,
+    backgroundColor: '#5C6BC0', borderRadius: 14, paddingVertical: 16,
     shadowColor: '#5C6BC0', shadowOpacity: 0.35, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 6,
   },
   addDeviceBtnText: { color: '#fff', fontSize: 17, fontWeight: '700' },
   footer:     { fontSize: 10, color: '#9CA3AF', letterSpacing: 1.2, fontWeight: '600', marginTop: 8 },
 });
 
-// Category section
 const cs = StyleSheet.create({
   catHeader: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start',
     paddingHorizontal: 16, paddingTop: 24, paddingBottom: 12,
   },
-  catLabel:   { fontSize: 13, fontWeight: '800', color: '#1C1C1E', letterSpacing: 0.6 },
-  catRange:   { fontSize: 11, color: '#9CA3AF', marginTop: 2 },
-  activeBadge:{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#EEF0FB', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 20 },
-  activeDot:  { width: 6, height: 6, borderRadius: 3, backgroundColor: '#22C55E' },
-  activeText: { fontSize: 11, color: '#5C6BC0', fontWeight: '600' },
+  catLabel:    { fontSize: 13, fontWeight: '800', color: '#1C1C1E', letterSpacing: 0.6 },
+  catRange:    { fontSize: 11, color: '#9CA3AF', marginTop: 2 },
+  activeBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#EEF0FB', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 20 },
+  activeDot:   { width: 6, height: 6, borderRadius: 3, backgroundColor: '#22C55E' },
+  activeText:  { fontSize: 11, color: '#5C6BC0', fontWeight: '600' },
+  grid:        { paddingHorizontal: 16, gap: 10 },
+  gridRow:     { flexDirection: 'row', gap: 10 },
 });
 
-// Device card
 const dc = StyleSheet.create({
   card: {
-    marginHorizontal: 16, marginBottom: 12,
-    backgroundColor: '#fff', borderRadius: 14, padding: 16,
+    flex: 1,
+    backgroundColor: '#fff', borderRadius: 14, padding: 12,
     shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, elevation: 2,
-    alignSelf: 'center', width: '92%',
   },
-  row:      { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
-  name:     { fontSize: 14, fontWeight: '700', color: '#1C1C1E' },
-  dot:      { width: 9, height: 9, borderRadius: 5 },
-  temp:     { fontSize: 14, color: '#1C1C1E', marginBottom: 4 },
-  tempBig:  { fontSize: 32, fontWeight: '800', color: '#1C1C1E' },
-  battery:  { fontSize: 12, color: '#9CA3AF' },
+  topRow:      { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
+  name:        { fontSize: 12, fontWeight: '700', color: '#1C1C1E', flex: 1, marginRight: 4 },
+  dot:         { width: 8, height: 8, borderRadius: 4 },
+  statsRow:    { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
+  statCol:     { flex: 1 },
+  statDivider: { width: StyleSheet.hairlineWidth, height: 36, backgroundColor: '#E5E7EB', marginHorizontal: 10 },
+  metricRow:   { flexDirection: 'row', alignItems: 'center', gap: 3, marginBottom: 2 },
+  metricLabel: { fontSize: 9, fontWeight: '700', color: '#9CA3AF', letterSpacing: 0.4 },
+  valueRow:    { flexDirection: 'row', alignItems: 'flex-end', gap: 1 },
+  valueBig:    { fontSize: 20, fontWeight: '800', lineHeight: 24 },
+  valueUnit:   { fontSize: 11, fontWeight: '600', color: '#6B7280', marginBottom: 1 },
+  batteryRow:  { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  battery:     { fontSize: 11, color: '#9CA3AF' },
 });
 
-// Graph
 const gs = StyleSheet.create({
   graphCard: {
-    marginHorizontal: 16, marginBottom: 24,
-    backgroundColor: '#fff', borderRadius: 14, padding: 16,
+    marginHorizontal: 16, marginTop: 12, marginBottom: 24,
+    backgroundColor: '#fff', borderRadius: 20, padding: 16,
     shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, elevation: 2,
-    alignSelf: 'center', width: '92%',
   },
-  graphDeviceName: { fontSize: 13, fontWeight: '700', color: '#1C1C1E', marginBottom: 10 },
-  // Bordered plot box — fills remaining width, fixed height
-  plotBox: {
-    flex: 1,
-    height: GRAPH_H,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    borderRadius: 4,
-    overflow: 'hidden',
-    backgroundColor: '#FAFAFA',
-  },
+  graphTitle:  { fontSize: 13, fontWeight: '700', color: '#1C1C1E', marginBottom: 12 },
+  // Y axis
+  yLabel:     { fontSize: 9, color: '#9CA3AF', textAlign: 'right', minWidth: 22 },
+  yTick:      { width: 4, height: 1, backgroundColor: '#9CA3AF', marginLeft: 2 },
+  yAxisLine:  { width: 1.5, height: GRAPH_H, backgroundColor: '#9CA3AF' },
+  // Plot
   gridLine:   { position: 'absolute', left: 0, right: 0, height: StyleSheet.hairlineWidth, backgroundColor: '#E5E7EB' },
   threshLine: { position: 'absolute', left: 0, right: 0, height: 1, borderTopWidth: 1, borderStyle: 'dashed' },
-  axisLabel:  { fontSize: 8, color: '#9CA3AF' },
-  noDataText: { fontSize: 12, color: '#C4C4C4' },
+  // X axis
+  xAxisLine:  { height: 1.5, backgroundColor: '#9CA3AF' },
+  xLabel:     { fontSize: 8, color: '#9CA3AF', textAlign: 'center' },
+  // Legend
   legend:     { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 12 },
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  legendDot:  { width: 6, height: 6, borderRadius: 3 },
+  legendDash: { width: 14, height: 0, borderTopWidth: 1.5, borderStyle: 'dashed' },
   legendLine: { width: 14, height: 2, borderRadius: 1 },
   legendText: { fontSize: 9, color: '#6B7280' },
 });

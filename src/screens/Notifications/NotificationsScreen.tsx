@@ -192,10 +192,10 @@ export default function NotificationsScreen({ navigation }: any) {
           onPress={() => navigation.goBack()}
           style={({ pressed }) => [styles.backBtn, pressed && { opacity: 0.5 }]}
         >
-          <Ionicons name="chevron-back" size={24} color="#1C1C1E" />
+          <Ionicons name="arrow-back" size={22} color="#1C1C1E" />
         </Pressable>
         <Text style={styles.headerTitle}>Notifications</Text>
-        <View style={{ width: 36 }} />
+        <View style={{ width: 44 }} />
       </Animated.View>
 
       <TabBar tab={tab} onSelect={setTab} />
@@ -226,7 +226,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16, paddingVertical: 14,
     borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#E0E0E0',
   },
-  backBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
+  backBtn: { width: 44, height: 44, borderRadius: 12, backgroundColor: '#F4F6FB', alignItems: 'center', justifyContent: 'center' },
   headerTitle: { fontSize: 18, fontWeight: '700', color: '#1C1C1E' },
   tabRow: {
     flexDirection: 'row', margin: 16, marginBottom: 8,

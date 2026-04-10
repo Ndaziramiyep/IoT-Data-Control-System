@@ -1,12 +1,22 @@
-import React, { useEffect, useState } from 'react';
-import { Linking, StatusBar } from 'react-native';
+import React, { useEffect, useState, useCallback } from 'react';
+import { StatusBar, AppState, AppStateStatus } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import * as NativeSplash from 'expo-splash-screen';
 import { initDb } from './src/database/db';
 import AppNavigator from './src/navigation/AppNavigator';
 import SplashScreen from './src/screens/SplashScreen';
 import BluetoothPermissionModal from './src/components/common/BluetoothPermissionModal';
-import { requestBluetoothPermissions } from './src/utils/permissions';
+import {
+  PermissionStatus,
+  checkAllStatus,
+  requestPermissions,
+  openLocationSettings,
+  openAppSettings,
+} from './src/utils/permissions';
 import { useSync } from './src/hooks/useSync';
+
+// Keep native splash visible until JS is ready
+NativeSplash.preventAutoHideAsync().catch(() => {});
 
 function AppContent() {
   useSync();
@@ -14,44 +24,46 @@ function AppContent() {
 }
 
 export default function App() {
-  const [showSplash, setShowSplash] = useState(true);
-  const [showBtModal, setShowBtModal] = useState(false);
-  const [permissionsGranted, setPermissionsGranted] = useState(false);
+  const [showSplash, setShowSplash]   = useState(true);
+  const [status, setStatus]           = useState<PermissionStatus>('needs_permission');
 
   useEffect(() => {
     initDb().catch(console.error);
+    // Hide native splash immediately — our JS SplashScreen takes over
+    NativeSplash.hideAsync().catch(() => {});
   }, []);
 
-  const checkPermissions = async () => {
-    const granted = await requestBluetoothPermissions();
-    if (granted) {
-      setPermissionsGranted(true);
-      setShowBtModal(false);
-    } else {
-      setShowBtModal(true);
-    }
-  };
+  // Re-check every time the app comes back to foreground (user returns from Settings)
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (state: AppStateStatus) => {
+      if (state === 'active' && !showSplash) runCheck();
+    });
+    return () => sub.remove();
+  }, [showSplash]);
 
-  const handleSplashFinish = () => {
+  const runCheck = useCallback(async () => {
+    const s = await checkAllStatus();
+    setStatus(s);
+  }, []);
+
+  const handleSplashFinish = async () => {
     setShowSplash(false);
-    checkPermissions();
+    await runCheck();
   };
 
-  const handleEnable = async () => {
-    // Try requesting again; if denied permanently, open app settings
-    const granted = await requestBluetoothPermissions();
-    if (granted) {
-      setPermissionsGranted(true);
-      setShowBtModal(false);
-    } else {
-      Linking.openSettings();
+  const handlePrimaryAction = async () => {
+    if (status === 'needs_permission') {
+      const result = await requestPermissions();
+      if (result === 'granted') {
+        await runCheck();
+      } else {
+        setStatus('denied');
+      }
+    } else if (status === 'denied') {
+      await openAppSettings();
+    } else if (status === 'location_off') {
+      await openLocationSettings();
     }
-  };
-
-  const handleCancel = () => {
-    // Allow continuing without BLE — app will work in limited mode
-    setShowBtModal(false);
-    setPermissionsGranted(true);
   };
 
   if (showSplash) {
@@ -61,12 +73,14 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
-      <AppContent />
-      <BluetoothPermissionModal
-        visible={showBtModal}
-        onEnable={handleEnable}
-        onCancel={handleCancel}
-      />
+      {status === 'granted' ? (
+        <AppContent />
+      ) : (
+        <BluetoothPermissionModal
+          status={status}
+          onPrimaryAction={handlePrimaryAction}
+        />
+      )}
     </SafeAreaProvider>
   );
 }

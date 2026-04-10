@@ -17,7 +17,13 @@
       "backgroundColor": "#EEF1F8"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSBluetoothAlwaysUsageDescription": "This app uses Bluetooth to connect to IoT temperature sensors.",
+        "NSBluetoothPeripheralUsageDescription": "This app uses Bluetooth to connect to IoT temperature sensors.",
+        "NSLocationWhenInUseUsageDescription": "Location is required to scan for nearby Bluetooth devices.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "Location is required to scan for nearby Bluetooth devices."
+      }
     },
     "android": {
       "package": "com.kumva.insights",
@@ -42,7 +48,13 @@
     },
     "plugins": [
       "expo-sqlite",
-      "expo-font"
+      "expo-font",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Location is required to scan for nearby Bluetooth devices."
+        }
+      ]
     ]
   }
 }

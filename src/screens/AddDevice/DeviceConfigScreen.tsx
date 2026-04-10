@@ -134,10 +134,10 @@ export default function DeviceConfigScreen({ navigation, route }: any) {
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
-          <Text style={styles.backIcon}>←</Text>
+          <Ionicons name="arrow-back" size={22} color="#1C1C1E" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Configure Device</Text>
-        <View style={{ width: 36 }} />
+        <View style={{ width: 44 }} />
       </View>
 
       <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
@@ -254,11 +254,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16, paddingVertical: 14, backgroundColor: '#F4F6FB',
   },
   backBtn: {
-    width: 36, height: 36, borderRadius: 10, backgroundColor: '#fff',
+    width: 44, height: 44, borderRadius: 12, backgroundColor: '#fff',
     alignItems: 'center', justifyContent: 'center',
     shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 4, elevation: 2,
   },
-  backIcon: { fontSize: 18, color: '#1C1C1E' },
   headerTitle: { fontSize: 17, fontWeight: '700', color: '#1C1C1E' },
   body: { paddingHorizontal: 20, paddingBottom: 40, gap: 12 },
   banner: {
@@ -274,12 +273,12 @@ const styles = StyleSheet.create({
   label: { fontSize: 11, fontWeight: '700', color: '#9CA3AF', letterSpacing: 0.8, marginBottom: -4 },
   input: {
     backgroundColor: '#fff', borderRadius: 10, borderWidth: 1, borderColor: '#E5E7EB',
-    paddingHorizontal: 14, paddingVertical: 13, fontSize: 15, color: '#1C1C1E',
+    paddingHorizontal: 14, height: 50, fontSize: 15, color: '#1C1C1E',
   },
   inputReadonly: { backgroundColor: '#F4F6FB', color: '#9CA3AF' },
   select: {
     backgroundColor: '#fff', borderRadius: 10, borderWidth: 1, borderColor: '#E5E7EB',
-    paddingHorizontal: 14, paddingVertical: 13, flexDirection: 'row',
+    paddingHorizontal: 14, height: 50, flexDirection: 'row',
     justifyContent: 'space-between', alignItems: 'center',
   },
   selectText: { fontSize: 15, color: '#1C1C1E' },
@@ -296,9 +295,10 @@ const styles = StyleSheet.create({
   thresholdCol: { flex: 1, gap: 6 },
   thresholdInput: {
     backgroundColor: '#fff', borderRadius: 10, borderWidth: 1, borderColor: '#E5E7EB',
-    flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 13,
+    flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 0,
+    height: 50,
   },
-  thresholdValue: { flex: 1, fontSize: 15, color: '#1C1C1E' },
+  thresholdValue: { flex: 1, fontSize: 15, color: '#1C1C1E', height: 50, textAlignVertical: 'center' },
   unit: { fontSize: 14, color: '#9CA3AF' },
   infoBox: {
     flexDirection: 'row', gap: 10, backgroundColor: '#EEF0FB',

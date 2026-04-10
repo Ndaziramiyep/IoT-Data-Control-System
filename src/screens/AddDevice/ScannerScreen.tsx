@@ -3,6 +3,7 @@ import {
   View, Text, StyleSheet, TouchableOpacity, Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { CameraView, Camera } from 'expo-camera';
 
 interface BleAdvertisement {
@@ -48,10 +49,10 @@ export default function ScannerScreen({ navigation }: any) {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
-          <Text style={styles.backIcon}>‹</Text>
+          <Ionicons name="arrow-back" size={22} color="#1C1C1E" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Onboard Device</Text>
-        <View style={{ width: 36 }} />
+        <View style={{ width: 44 }} />
       </View>
 
       {/* Body */}
@@ -128,9 +129,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#F0F2FA',
   },
   backBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
+    width: 44,
+    height: 44,
+    borderRadius: 12,
     backgroundColor: '#fff',
     alignItems: 'center',
     justifyContent: 'center',
@@ -139,8 +140,7 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
-  backIcon: { fontSize: 24, color: '#1C1C1E', lineHeight: 28 },
-  headerTitle: { fontSize: 17, fontWeight: '700', color: '#1C1C1E' },
+  backIcon: { fontSize: 24, color: '#1C1C1E', lineHeight: 28 },  headerTitle: { fontSize: 17, fontWeight: '700', color: '#1C1C1E' },
 
   body: {
     flex: 1,
