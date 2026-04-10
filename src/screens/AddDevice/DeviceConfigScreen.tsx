@@ -16,12 +16,30 @@ const CATEGORIES: { label: string; value: DeviceCategory }[] = [
   { label: 'General Area', value: 'general' },
 ];
 
-const CATEGORY_DEFAULTS: Record<DeviceCategory, { low: string; high: string }> = {
-  freezer:   { low: '-20', high: '0' },
-  fridge:    { low: '2',   high: '8' },
-  cold_room: { low: '0',  high: '10' },
-  general:   { low: '15', high: '30' },
+const CATEGORY_DEFAULTS: Record<DeviceCategory, { low: number; high: number }> = {
+  freezer:   { low: -20, high: 0  },
+  fridge:    { low: 2,   high: 8  },
+  cold_room: { low: 0,   high: 10 },
+  general:   { low: 15,  high: 30 },
 };
+
+const LIMIT = 5;
+
+function clampThreshold(value: string, defaultVal: number): string {
+  const n = parseFloat(value);
+  if (isNaN(n)) return value;
+  const min = defaultVal - LIMIT;
+  const max = defaultVal + LIMIT;
+  if (n < min) return String(min);
+  if (n > max) return String(max);
+  return value;
+}
+
+function isOutOfRange(value: string, defaultVal: number): boolean {
+  const n = parseFloat(value);
+  if (isNaN(n)) return false;
+  return n < defaultVal - LIMIT || n > defaultVal + LIMIT;
+}
 
 export default function DeviceConfigScreen({ navigation, route }: any) {
   const addDevice = useAppStore(s => s.addDevice);
@@ -37,10 +55,10 @@ export default function DeviceConfigScreen({ navigation, route }: any) {
   const [category, setCategory] = useState<DeviceCategory>(initialCategory);
   const existingDevice = existingDevices.find(d => d.device_id === deviceId);
   const [highThreshold, setHighThreshold] = useState(
-    isReconfigure && existingDevice ? String(existingDevice.temp_high_threshold) : CATEGORY_DEFAULTS[initialCategory].high
+    isReconfigure && existingDevice ? String(existingDevice.temp_high_threshold) : String(CATEGORY_DEFAULTS[initialCategory].high)
   );
   const [lowThreshold, setLowThreshold] = useState(
-    isReconfigure && existingDevice ? String(existingDevice.temp_low_threshold) : CATEGORY_DEFAULTS[initialCategory].low
+    isReconfigure && existingDevice ? String(existingDevice.temp_low_threshold) : String(CATEGORY_DEFAULTS[initialCategory].low)
   );
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -55,6 +73,23 @@ export default function DeviceConfigScreen({ navigation, route }: any) {
     const trimmedMac = macAddress.trim().toUpperCase();
     if (!trimmedMac) {
       Alert.alert('MAC Address Required', 'Please enter the device MAC address.');
+      return;
+    }
+
+    // Validate thresholds within ±5 of category defaults
+    const defaults = CATEGORY_DEFAULTS[category];
+    if (isOutOfRange(highThreshold, defaults.high)) {
+      Alert.alert(
+        'Invalid High Threshold',
+        `High threshold must be between ${defaults.high - LIMIT}°C and ${defaults.high + LIMIT}°C for this category.`
+      );
+      return;
+    }
+    if (isOutOfRange(lowThreshold, defaults.low)) {
+      Alert.alert(
+        'Invalid Low Threshold',
+        `Low threshold must be between ${defaults.low - LIMIT}°C and ${defaults.low + LIMIT}°C for this category.`
+      );
       return;
     }
 
@@ -185,8 +220,8 @@ export default function DeviceConfigScreen({ navigation, route }: any) {
                 style={[styles.dropdownItem, c.value === category && styles.dropdownItemActive]}
                 onPress={() => {
                   setCategory(c.value);
-                  setHighThreshold(CATEGORY_DEFAULTS[c.value].high);
-                  setLowThreshold(CATEGORY_DEFAULTS[c.value].low);
+                  setHighThreshold(String(CATEGORY_DEFAULTS[c.value].high));
+                  setLowThreshold(String(CATEGORY_DEFAULTS[c.value].low));
                   setShowCategoryPicker(false);
                 }}
               >
@@ -201,27 +236,35 @@ export default function DeviceConfigScreen({ navigation, route }: any) {
         <View style={styles.thresholdRow}>
           <View style={styles.thresholdCol}>
             <Text style={styles.label}>HIGH THRESHOLD</Text>
-            <View style={styles.thresholdInput}>
+            <View style={[styles.thresholdInput, isOutOfRange(highThreshold, CATEGORY_DEFAULTS[category].high) && styles.thresholdInputError]}>
               <TextInput
                 style={styles.thresholdValue}
                 value={highThreshold}
                 onChangeText={setHighThreshold}
+                onBlur={() => setHighThreshold(clampThreshold(highThreshold, CATEGORY_DEFAULTS[category].high))}
                 keyboardType="numeric"
               />
               <Text style={styles.unit}>°C</Text>
             </View>
+            <Text style={styles.thresholdHint}>
+              {CATEGORY_DEFAULTS[category].high - LIMIT}° to {CATEGORY_DEFAULTS[category].high + LIMIT}°C
+            </Text>
           </View>
           <View style={styles.thresholdCol}>
             <Text style={styles.label}>LOW THRESHOLD</Text>
-            <View style={styles.thresholdInput}>
+            <View style={[styles.thresholdInput, isOutOfRange(lowThreshold, CATEGORY_DEFAULTS[category].low) && styles.thresholdInputError]}>
               <TextInput
                 style={styles.thresholdValue}
                 value={lowThreshold}
                 onChangeText={setLowThreshold}
+                onBlur={() => setLowThreshold(clampThreshold(lowThreshold, CATEGORY_DEFAULTS[category].low))}
                 keyboardType="numeric"
               />
               <Text style={styles.unit}>°C</Text>
             </View>
+            <Text style={styles.thresholdHint}>
+              {CATEGORY_DEFAULTS[category].low - LIMIT}° to {CATEGORY_DEFAULTS[category].low + LIMIT}°C
+            </Text>
           </View>
         </View>
 
@@ -298,8 +341,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 0,
     height: 50,
   },
+  thresholdInputError: { borderColor: '#EF4444' },
   thresholdValue: { flex: 1, fontSize: 15, color: '#1C1C1E', height: 50, textAlignVertical: 'center' },
   unit: { fontSize: 14, color: '#9CA3AF' },
+  thresholdHint: { fontSize: 10, color: '#9CA3AF', marginTop: 3 },
   infoBox: {
     flexDirection: 'row', gap: 10, backgroundColor: '#EEF0FB',
     borderRadius: 12, padding: 14, alignItems: 'flex-start',
