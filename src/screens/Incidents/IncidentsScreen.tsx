@@ -34,6 +34,17 @@ function categoryLabel(cat: string): string {
 
 type Row = Incident & { deviceName: string; deviceCategory: string };
 
+const SAMPLE_INCIDENTS: Row[] = [
+  { incident_id: 's1', device_id: 'd1', start_time: Date.now() - 2 * 3600000,   end_time: Date.now() - 1 * 3600000,   deviceName: 'Main Freezer 01',  deviceCategory: 'freezer'   },
+  { incident_id: 's2', device_id: 'd2', start_time: Date.now() - 6 * 3600000,   end_time: Date.now() - 5 * 3600000,   deviceName: 'Fridge Unit A',    deviceCategory: 'fridge'    },
+  { incident_id: 's3', device_id: 'd3', start_time: Date.now() - 26 * 3600000,  end_time: null,                        deviceName: 'Cold Room North',  deviceCategory: 'cold_room' },
+  { incident_id: 's4', device_id: 'd4', start_time: Date.now() - 48 * 3600000,  end_time: Date.now() - 46 * 3600000,  deviceName: 'General Store B',  deviceCategory: 'general'   },
+  { incident_id: 's5', device_id: 'd1', start_time: Date.now() - 72 * 3600000,  end_time: Date.now() - 71 * 3600000,  deviceName: 'Main Freezer 01',  deviceCategory: 'freezer'   },
+  { incident_id: 's6', device_id: 'd5', start_time: Date.now() - 96 * 3600000,  end_time: Date.now() - 94 * 3600000,  deviceName: 'Fridge Unit B',    deviceCategory: 'fridge'    },
+  { incident_id: 's7', device_id: 'd3', start_time: Date.now() - 120 * 3600000, end_time: Date.now() - 118 * 3600000, deviceName: 'Cold Room North',  deviceCategory: 'cold_room' },
+  { incident_id: 's8', device_id: 'd6', start_time: Date.now() - 144 * 3600000, end_time: Date.now() - 143 * 3600000, deviceName: 'Freezer Unit 02',  deviceCategory: 'freezer'   },
+];
+
 export default function IncidentsScreen({ navigation }: any) {
   const devices = useAppStore(s => s.devices);
   const [incidents, setIncidents] = useState<Row[]>([]);
@@ -65,6 +76,9 @@ export default function IncidentsScreen({ navigation }: any) {
     );
   }, [incidents, search]);
 
+  const displayData = filtered.length > 0 ? filtered : SAMPLE_INCIDENTS;
+  const isSample = filtered.length === 0;
+
   const exportAs = (format: 'PDF' | 'Excel') => {
     if (filtered.length === 0) {
       Alert.alert('No Data', 'No incidents to export.');
@@ -92,7 +106,14 @@ export default function IncidentsScreen({ navigation }: any) {
       </View>
 
       {/* Recent Activity + Export */}
-      <Text style={styles.sectionTitle}>Recent Activity</Text>
+      <View style={styles.sectionTitleRow}>
+        <Text style={styles.sectionTitle}>Recent Activity</Text>
+        {isSample && (
+          <View style={styles.sampleBadge}>
+            <Text style={styles.sampleBadgeText}>SAMPLE DATA</Text>
+          </View>
+        )}
+      </View>
       <View style={styles.exportRow}>
         <TouchableOpacity style={styles.exportBtn} onPress={() => exportAs('PDF')} activeOpacity={0.85}>
           <Ionicons name="document-text-outline" size={15} color="#fff" />
@@ -130,10 +151,9 @@ export default function IncidentsScreen({ navigation }: any) {
       </View>
 
       <FlatList
-        data={filtered}
+        data={displayData}
         keyExtractor={(item, i) => `${item.incident_id ?? i}`}
         ListHeaderComponent={renderHeader}
-        ListEmptyComponent={renderEmpty}
         contentContainerStyle={styles.list}
         showsVerticalScrollIndicator={false}
         renderItem={({ item, index }) => (
@@ -169,7 +189,10 @@ const styles = StyleSheet.create({
   },
   searchInput: { flex: 1, fontSize: 14, color: '#1C1C1E' },
 
-  sectionTitle: { fontSize: 15, fontWeight: '700', color: '#1C1C1E', marginHorizontal: 16, marginBottom: 10 },
+  sectionTitleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginHorizontal: 16, marginBottom: 10 },
+  sectionTitle: { fontSize: 15, fontWeight: '700', color: '#1C1C1E' },
+  sampleBadge: { backgroundColor: '#FEF3C7', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 },
+  sampleBadgeText: { fontSize: 10, fontWeight: '700', color: '#D97706', letterSpacing: 0.5 },
 
   exportRow: { flexDirection: 'row', gap: 10, marginHorizontal: 16, marginBottom: 16 },
   exportBtn: {

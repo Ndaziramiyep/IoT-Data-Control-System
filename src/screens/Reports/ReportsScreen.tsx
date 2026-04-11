@@ -104,6 +104,17 @@ function DatePickerModal({
   );
 }
 
+const SAMPLE_REPORT_ROWS = [
+  { device: 'Main Freezer 01',  category: 'freezer',   temperature: -4.2,  humidity: 68, timestamp: formatDate(Date.now() - 1 * 86400000) },
+  { device: 'Main Freezer 01',  category: 'freezer',   temperature: -3.8,  humidity: 70, timestamp: formatDate(Date.now() - 2 * 86400000) },
+  { device: 'Fridge Unit A',    category: 'fridge',    temperature:  4.1,  humidity: 55, timestamp: formatDate(Date.now() - 1 * 86400000) },
+  { device: 'Fridge Unit A',    category: 'fridge',    temperature:  5.3,  humidity: 57, timestamp: formatDate(Date.now() - 2 * 86400000) },
+  { device: 'Cold Room North',  category: 'cold_room', temperature:  2.7,  humidity: 72, timestamp: formatDate(Date.now() - 1 * 86400000) },
+  { device: 'Cold Room North',  category: 'cold_room', temperature:  3.1,  humidity: 74, timestamp: formatDate(Date.now() - 3 * 86400000) },
+  { device: 'General Store B',  category: 'general',   temperature: 18.5,  humidity: 45, timestamp: formatDate(Date.now() - 2 * 86400000) },
+  { device: 'Freezer Unit 02',  category: 'freezer',   temperature: -5.1,  humidity: 66, timestamp: formatDate(Date.now() - 4 * 86400000) },
+];
+
 export default function ReportsScreen() {
   const devices = useAppStore(s => s.devices);
 
@@ -247,8 +258,30 @@ export default function ReportsScreen() {
         <TouchableOpacity style={styles.previewBox} onPress={generateReport} activeOpacity={0.8}>
           {!hasGenerated ? (
             <>
-              <Ionicons name="bar-chart-outline" size={36} color="#D1D5DB" />
-              <Text style={styles.previewText}>Select filters and dates to generate{'\n'}your report data for export.</Text>
+              <View style={styles.previewSampleHeader}>
+                <Text style={styles.previewSummaryTitle}>Report Preview</Text>
+                <View style={styles.sampleBadge}>
+                  <Text style={styles.sampleBadgeText}>SAMPLE DATA</Text>
+                </View>
+              </View>
+              <Text style={styles.previewSummaryCount}>{SAMPLE_REPORT_ROWS.length} reading(s)</Text>
+              <Text style={styles.previewSummaryRange}>Tap to generate with your filters</Text>
+              <View style={styles.previewTable}>
+                <View style={styles.previewTableHeader}>
+                  <Text style={[styles.previewCell, styles.previewCellHead]}>Device</Text>
+                  <Text style={[styles.previewCell, styles.previewCellHead]}>Temp</Text>
+                  <Text style={[styles.previewCell, styles.previewCellHead]}>Humidity</Text>
+                  <Text style={[styles.previewCell, styles.previewCellHead]}>Date</Text>
+                </View>
+                {SAMPLE_REPORT_ROWS.slice(0, 6).map((row, i) => (
+                  <View key={i} style={[styles.previewTableRow, i % 2 === 0 && styles.previewTableRowAlt]}>
+                    <Text style={styles.previewCell} numberOfLines={1}>{row.device}</Text>
+                    <Text style={styles.previewCell}>{row.temperature}°C</Text>
+                    <Text style={styles.previewCell}>{row.humidity}%</Text>
+                    <Text style={styles.previewCell}>{row.timestamp}</Text>
+                  </View>
+                ))}
+              </View>
             </>
           ) : reportRows.length === 0 ? (
             <>
@@ -264,17 +297,19 @@ export default function ReportsScreen() {
                 <View style={styles.previewTableHeader}>
                   <Text style={[styles.previewCell, styles.previewCellHead]}>Device</Text>
                   <Text style={[styles.previewCell, styles.previewCellHead]}>Temp</Text>
+                  <Text style={[styles.previewCell, styles.previewCellHead]}>Humidity</Text>
                   <Text style={[styles.previewCell, styles.previewCellHead]}>Date</Text>
                 </View>
-                {reportRows.slice(0, 5).map((row, i) => (
+                {reportRows.slice(0, 6).map((row, i) => (
                   <View key={i} style={[styles.previewTableRow, i % 2 === 0 && styles.previewTableRowAlt]}>
                     <Text style={styles.previewCell} numberOfLines={1}>{row.device}</Text>
                     <Text style={styles.previewCell}>{row.temperature}°C</Text>
+                    <Text style={styles.previewCell}>{row.humidity}%</Text>
                     <Text style={styles.previewCell}>{row.timestamp}</Text>
                   </View>
                 ))}
-                {reportRows.length > 5 && (
-                  <Text style={styles.previewMore}>+{reportRows.length - 5} more rows</Text>
+                {reportRows.length > 6 && (
+                  <Text style={styles.previewMore}>+{reportRows.length - 6} more rows</Text>
                 )}
               </View>
             </>
@@ -363,10 +398,12 @@ const styles = StyleSheet.create({
 
   previewBox: {
     backgroundColor: '#fff', borderRadius: 14,
-    borderWidth: 1.5, borderColor: '#E5E7EB', borderStyle: 'dashed',
-    minHeight: 160, alignItems: 'center', justifyContent: 'center',
-    padding: 20, gap: 8,
+    borderWidth: 1.5, borderColor: '#E5E7EB',
+    padding: 16, gap: 6,
   },
+  previewSampleHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%' },
+  sampleBadge: { backgroundColor: '#FEF3C7', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 },
+  sampleBadgeText: { fontSize: 10, fontWeight: '700', color: '#D97706', letterSpacing: 0.5 },
   previewText: { fontSize: 13, color: '#9CA3AF', textAlign: 'center', lineHeight: 20 },
   previewSummaryTitle: { fontSize: 14, fontWeight: '700', color: '#1C1C1E' },
   previewSummaryCount: { fontSize: 22, fontWeight: '800', color: '#5C6BC0' },
